@@ -1,0 +1,30 @@
+// TypeScript
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# env
+.env
+.env.local
+.env.*.local
+*.txt
+mock-gateway.cjs
+smoke.ts
+
+# runtime data
+projects/
+uploads/
+workspace/
+npm-install.log
+npm-install.err.log
+
+# legacy vite artifacts
+src/*.jsx
+src/*.css
+
+.DS_Store
+*.log

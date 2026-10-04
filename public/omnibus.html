@@ -1,0 +1,2616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniRoute Studio</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>
+  if(window["pdfjsLib"]){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+  }
+</script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--font-ui);
+    background:var(--bg-app);
+    color:var(--text-1);
+    overflow:hidden;
+    transition:background .15s ease,color .15s ease;
+  }
+
+  /* ============ THEME TOKENS ============ */
+  body[data-skin="chatgpt"][data-mode="dark"]{
+    --bg-app:#212121;--bg-sidebar:#171717;--bg-surface:#2f2f2f;--bg-surface-2:#3a3a3a;
+    --text-1:#ececec;--text-2:#b4b4b4;--text-3:#8e8e8e;--border:#424242;
+    --accent:#10a37f;--accent-2:#3ecf9c;--accent-hover:#0d8c6d;--accent-text:#ffffff;--accent-soft:rgba(16,163,127,.14);
+    --bubble-user:#2f2f2f;--radius:16px;--danger:#ef4444;
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --code-bg:#1a1a1a;--shadow-1:0 1px 2px rgba(0,0,0,.4);--shadow-2:0 8px 30px rgba(0,0,0,.45);
+  }
+  body[data-skin="chatgpt"][data-mode="light"]{
+    --bg-app:#ffffff;--bg-sidebar:#f9f9f9;--bg-surface:#f4f4f4;--bg-surface-2:#ececec;
+    --text-1:#0d0d0d;--text-2:#5d5d5d;--text-3:#8e8e8e;--border:#e5e5e5;
+    --accent:#10a37f;--accent-2:#3ecf9c;--accent-hover:#0d8c6d;--accent-text:#ffffff;--accent-soft:rgba(16,163,127,.1);
+    --bubble-user:#f4f4f4;--radius:16px;--danger:#dc2626;
+    --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --code-bg:#f6f6f6;--shadow-1:0 1px 2px rgba(0,0,0,.06);--shadow-2:0 12px 34px rgba(0,0,0,.14);
+  }
+  body[data-skin="claude"][data-mode="light"]{
+    --bg-app:#FAF9F5;--bg-sidebar:#F4F3EE;--bg-surface:#ffffff;--bg-surface-2:#EFEDE4;
+    --text-1:#1F1E1D;--text-2:#73726C;--text-3:#9A9890;--border:#E5E3DA;
+    --accent:#D97757;--accent-2:#E89A7B;--accent-hover:#c8663f;--accent-text:#ffffff;--accent-soft:rgba(217,119,87,.12);
+    --bubble-user:#EFEDE4;--radius:20px;--danger:#c0392b;
+    --font-ui:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    --code-bg:#F4F3EE;--shadow-1:0 1px 2px rgba(90,70,50,.08);--shadow-2:0 14px 38px rgba(90,70,50,.16);
+  }
+  body[data-skin="claude"][data-mode="dark"]{
+    --bg-app:#262624;--bg-sidebar:#1F1E1C;--bg-surface:#30302E;--bg-surface-2:#3a3a37;
+    --text-1:#F5F4EE;--text-2:#A9A8A0;--text-3:#7d7c77;--border:#40403c;
+    --accent:#D97757;--accent-2:#F0A886;--accent-hover:#e5896a;--accent-text:#1F1E1D;--accent-soft:rgba(217,119,87,.16);
+    --bubble-user:#3a3a37;--radius:20px;--danger:#e57373;
+    --font-ui:"Segoe UI",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    --code-bg:#201f1d;--shadow-1:0 1px 2px rgba(0,0,0,.35);--shadow-2:0 14px 38px rgba(0,0,0,.5);
+  }
+
+  ::-webkit-scrollbar{width:9px;height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;border:2px solid transparent;background-clip:padding-box;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-3);background-clip:padding-box;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  *{scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+  @keyframes msgIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeScaleIn{ from{ opacity:0; transform:scale(.96) translateY(6px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes dotBounce{ 0%,60%,100%{ transform:translateY(0); opacity:.5; } 30%{ transform:translateY(-4px); opacity:1; } }
+
+  #app{display:flex;height:100vh;width:100vw;}
+
+  /* ============ SIDEBAR ============ */
+  .sidebar{
+    width:268px;flex-shrink:0;background:var(--bg-sidebar);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;padding:10px;gap:8px;transition:margin-left .2s ease;
+  }
+  .sidebar.collapsed{margin-left:-268px;}
+  .brand{display:flex;align-items:center;gap:9px;padding:8px 6px 14px;font-weight:700;font-size:.98rem;letter-spacing:-.01em;}
+  .brand .dot{
+    width:26px;height:26px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--accent-text);font-size:.68rem;font-weight:800;box-shadow:var(--shadow-1);
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .btn{
+    display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:10px;border:1px solid transparent;
+    background:transparent;color:var(--text-1);font-size:.85rem;cursor:pointer;text-align:left;width:100%;
+    transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
+  }
+  .btn:hover{background:var(--bg-surface);}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--accent), var(--accent-2)); color:var(--accent-text);
+    justify-content:center;font-weight:600;box-shadow:var(--shadow-1);
+  }
+  .btn-primary:hover{filter:brightness(1.05);box-shadow:0 4px 14px var(--accent-soft);}
+  .btn-outline{border:1px solid var(--border);}
+  .icon{width:16px;height:16px;flex-shrink:0;}
+  .search-box{
+    display:flex;align-items:center;gap:6px;background:var(--bg-surface);border:1px solid var(--border);
+    border-radius:9px;padding:7px 10px;transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .search-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .search-box input{background:transparent;border:none;outline:none;color:var(--text-1);font-size:.8rem;width:100%;}
+  .conv-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;margin-top:4px;}
+  .conv-group-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);padding:12px 8px 5px;font-weight:600;}
+  .conv-item{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 10px;border-radius:9px;
+    cursor:pointer;font-size:.82rem;color:var(--text-2);border-left:2px solid transparent;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .conv-item:hover{background:var(--bg-surface);}
+  .conv-item.active{background:var(--bg-surface-2);color:var(--text-1);border-left-color:var(--accent);font-weight:500;}
+  .conv-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+  .conv-actions{display:none;gap:4px;flex-shrink:0;}
+  .conv-item:hover .conv-actions{display:flex;}
+  .icon-btn{background:transparent;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:6px;display:flex;transition:background .15s ease, color .15s ease, transform .1s ease;}
+  .icon-btn:hover{background:var(--bg-surface-2);color:var(--text-1);}
+  .icon-btn:active{transform:scale(.92);}
+  .sidebar-footer{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border);padding-top:10px;}
+  .status-row{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;}
+  .status-badge{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text-2);}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:var(--text-3);transition:background .2s ease, box-shadow .2s ease;}
+  .status-dot.online{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);}
+  .status-dot.offline{background:var(--danger);box-shadow:0 0 0 3px rgba(239,68,68,.15);}
+  .status-dot.pending{background:#eab308;box-shadow:0 0 0 3px rgba(234,179,8,.15);}
+
+  /* ============ MAIN ============ */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+  .topbar{
+    height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 16px;
+    border-bottom:1px solid var(--border);background:var(--bg-app);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  .select-compact{
+    background:var(--bg-surface);border:1px solid var(--border);color:var(--text-1);
+    border-radius:9px;padding:6px 10px;font-size:.78rem;outline:none;max-width:220px;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .select-compact:hover{border-color:var(--text-3);}
+  .select-compact:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .chip{
+    display:inline-flex;align-items:center;gap:5px;background:var(--bg-surface);border:1px solid var(--border);
+    border-radius:999px;padding:5px 11px;font-size:.72rem;color:var(--text-2);cursor:pointer;user-select:none;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .chip:hover{border-color:var(--text-3);}
+  .chip:active{transform:scale(.96);}
+  .chip.on{background:linear-gradient(135deg, var(--accent), var(--accent-2));color:var(--accent-text);border-color:var(--accent);}
+  .topbar-spacer{flex:1;}
+  .skin-toggle{display:flex;background:var(--bg-surface);border:1px solid var(--border);border-radius:999px;padding:2px;}
+  .skin-toggle button{
+    border:none;background:transparent;color:var(--text-2);font-size:.72rem;padding:5px 11px;border-radius:999px;cursor:pointer;font-weight:600;
+    transition:background .15s ease, color .15s ease;
+  }
+  .skin-toggle button.active{background:linear-gradient(135deg, var(--accent), var(--accent-2));color:var(--accent-text);box-shadow:var(--shadow-1);}
+
+  .chat-scroll{flex:1;overflow-y:auto;padding:24px 0 8px;}
+  .welcome{max-width:680px;margin:8vh auto;text-align:center;padding:0 20px;animation:fadeScaleIn .4s ease;}
+  .welcome .dot-lg{
+    width:56px;height:56px;border-radius:16px;color:var(--accent-text);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.35rem;margin:0 auto 20px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));box-shadow:0 10px 30px var(--accent-soft);
+  }
+  .welcome h1{font-size:1.5rem;margin-bottom:9px;font-weight:700;letter-spacing:-.01em;}
+  .welcome p{color:var(--text-2);font-size:.9rem;line-height:1.65;}
+  .suggestion-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px;}
+  .suggestion-card{
+    border:1px solid var(--border);border-radius:13px;padding:13px 15px;text-align:left;cursor:pointer;
+    font-size:.8rem;color:var(--text-2);background:var(--bg-surface);
+    transition:background .15s ease, border-color .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+  .suggestion-card:hover{background:var(--bg-surface-2);border-color:var(--text-3);transform:translateY(-1px);box-shadow:var(--shadow-1);}
+  .suggestion-card b{display:block;color:var(--text-1);font-size:.82rem;margin-bottom:3px;}
+
+  .msg{padding:2px 20px;animation:msgIn .28s ease;}
+  .msg-inner{max-width:760px;margin:0 auto;}
+
+  /* chatgpt-style row layout */
+  body[data-skin="chatgpt"] .msg-inner{display:flex;gap:14px;}
+  body[data-skin="chatgpt"] .avatar{
+    width:30px;height:30px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:.72rem;font-weight:700;box-shadow:var(--shadow-1);
+  }
+  body[data-skin="chatgpt"] .role-user .avatar{background:linear-gradient(135deg,#6c4fe0,#5436da);color:#fff;}
+  body[data-skin="chatgpt"] .role-assistant .avatar{background:linear-gradient(135deg, var(--accent), var(--accent-2));color:var(--accent-text);}
+  body[data-skin="chatgpt"] .bubble{flex:1;padding-top:4px;}
+
+  /* claude-style layout: user = right bubble, assistant = plain w/ small mark */
+  body[data-skin="claude"] .role-user .msg-inner{display:flex;justify-content:flex-end;}
+  body[data-skin="claude"] .role-user .bubble{
+    background:var(--bubble-user);border-radius:var(--radius);padding:11px 16px;max-width:75%;box-shadow:var(--shadow-1);
+  }
+  body[data-skin="claude"] .role-user .avatar{display:none;}
+  body[data-skin="claude"] .role-assistant .msg-inner{display:flex;gap:12px;}
+  body[data-skin="claude"] .role-assistant .avatar{
+    width:27px;height:27px;border-radius:50%;color:var(--accent-text);
+    display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;flex-shrink:0;margin-top:2px;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));box-shadow:var(--shadow-1);
+  }
+  body[data-skin="claude"] .role-assistant .bubble{flex:1;}
+
+  .msg-image-grid{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .msg-image{max-width:280px;max-height:280px;border-radius:12px;display:block;box-shadow:var(--shadow-1);margin-bottom:0;}
+  .content{font-size:.92rem;line-height:1.65;word-break:break-word;}
+  .content p{margin:0 0 10px;}
+  .content p:last-child{margin-bottom:0;}
+  .content h1,.content h2,.content h3{margin:14px 0 8px;line-height:1.3;}
+  .content h1{font-size:1.2rem;}.content h2{font-size:1.08rem;}.content h3{font-size:1rem;}
+  .content ul,.content ol{margin:0 0 10px 20px;}
+  .content li{margin-bottom:4px;}
+  .content blockquote{border-left:3px solid var(--accent);padding:2px 12px;color:var(--text-2);margin:0 0 10px;}
+  .content a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft);}
+  .content a:hover{border-bottom-color:var(--accent);}
+  .inline-code{background:var(--code-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:.85em;font-family:"SF Mono",Consolas,monospace;}
+  .code-block{background:var(--code-bg);border:1px solid var(--border);border-radius:12px;margin:8px 0 12px;overflow:hidden;box-shadow:var(--shadow-1);}
+  .code-block-header{display:flex;justify-content:space-between;align-items:center;padding:7px 13px;font-size:.72rem;color:var(--text-3);border-bottom:1px solid var(--border);letter-spacing:.02em;}
+  .code-block pre{padding:13px;overflow-x:auto;}
+  .code-block code{font-family:"SF Mono",Consolas,monospace;font-size:.82rem;color:var(--text-1);white-space:pre;}
+  .code-block-actions{display:flex;gap:6px;}
+  .copy-btn{background:transparent;border:1px solid var(--border);color:var(--text-2);border-radius:7px;padding:3px 9px;font-size:.7rem;cursor:pointer;transition:background .15s ease, border-color .15s ease;}
+  .copy-btn:hover{background:var(--bg-surface-2);border-color:var(--text-3);}
+
+  .msg-meta{display:flex;align-items:center;gap:10px;margin-top:7px;font-size:.7rem;color:var(--text-3);}
+  .msg-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s ease;}
+  .msg:hover .msg-actions{opacity:1;}
+  .cursor-blink{display:inline-block;width:7px;height:1em;background:var(--text-1);vertical-align:text-bottom;animation:blink 1s step-start infinite;border-radius:1px;}
+  @keyframes blink{50%{opacity:0;}}
+  .typing-dots{display:inline-flex;gap:4px;padding:4px 0;}
+  .typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--text-3);animation:dotBounce 1.2s ease-in-out infinite;}
+  .typing-dots span:nth-child(2){animation-delay:.15s;}
+  .typing-dots span:nth-child(3){animation-delay:.3s;}
+
+  /* ============ COMPOSER ============ */
+  .composer-wrap{padding:10px 16px 18px;background:var(--bg-app);}
+  .composer{max-width:760px;margin:0 auto;}
+  .composer-toolbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+  .composer-box{
+    background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:10px 12px;display:flex;align-items:flex-end;gap:8px;box-shadow:var(--shadow-1);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .composer-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .attachment-preview{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+  .attachment-item{display:flex;align-items:center;gap:8px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:6px 8px;font-size:.76rem;color:var(--text-2);max-width:260px;}
+  .attachment-item img{width:32px;height:32px;object-fit:cover;border-radius:7px;flex-shrink:0;}
+  .attachment-item .att-icon{width:32px;height:32px;border-radius:7px;background:var(--bg-surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem;}
+  .attachment-item .att-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .attachment-preview .att-remove{background:transparent;border:none;color:var(--text-3);cursor:pointer;padding:4px;border-radius:6px;}
+  .attachment-preview .att-remove:hover{background:var(--bg-surface-2);color:var(--danger);}
+  .composer-box textarea{
+    flex:1;background:transparent;border:none;outline:none;color:var(--text-1);font-size:.92rem;
+    resize:none;max-height:200px;min-height:24px;line-height:1.5;font-family:var(--font-ui);
+  }
+  .send-btn{
+    width:34px;height:34px;border-radius:50%;border:none;color:var(--accent-text);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+    background:linear-gradient(135deg, var(--accent), var(--accent-2));
+    transition:transform .12s ease, box-shadow .15s ease, background .15s ease;box-shadow:var(--shadow-1);
+  }
+  .send-btn:hover:not(:disabled){transform:scale(1.06);box-shadow:0 4px 14px var(--accent-soft);}
+  .send-btn:active:not(:disabled){transform:scale(.94);}
+  .send-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .send-btn.stop{background:var(--danger);}
+  .hint-row{display:flex;justify-content:space-between;margin-top:7px;font-size:.68rem;color:var(--text-3);padding:0 4px;}
+
+  /* ============ DASHBOARD PANEL ============ */
+  .dashboard{
+    width:320px;flex-shrink:0;background:var(--bg-sidebar);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;transform:translateX(100%);position:absolute;right:0;top:0;bottom:0;
+    transition:transform .25s cubic-bezier(.2,.7,.3,1);z-index:5;box-shadow:var(--shadow-2);
+  }
+  .dashboard.open{transform:translateX(0);position:relative;}
+  .dash-header{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--border);font-weight:700;font-size:.85rem;}
+  .dash-tabs{display:flex;border-bottom:1px solid var(--border);}
+  .dash-tab{flex:1;padding:10px 4px;text-align:center;font-size:.7rem;color:var(--text-2);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s ease, border-color .15s ease;}
+  .dash-tab:hover{color:var(--text-1);}
+  .dash-tab.active{color:var(--text-1);border-color:var(--accent);font-weight:600;}
+  .dash-body{flex:1;overflow-y:auto;padding:12px 14px;}
+  .dash-pane{display:none;flex-direction:column;gap:10px;}
+  .dash-pane.active{display:flex;}
+  .stat-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:11px 13px;transition:border-color .15s ease;}
+  .stat-card:hover{border-color:var(--text-3);}
+  .stat-card .label{font-size:.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em;}
+  .stat-card .value{font-size:1.15rem;font-weight:700;margin-top:2px;}
+  .bar-track{height:8px;border-radius:4px;background:var(--bg-surface-2);overflow:hidden;margin-top:8px;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s ease;}
+  .model-item{padding:8px 10px;border-radius:8px;font-size:.78rem;cursor:pointer;border:1px solid transparent;}
+  .model-item:hover{background:var(--bg-surface);}
+  .model-item.active{background:var(--bg-surface-2);border-color:var(--border);}
+  .model-item .mid{font-weight:600;}
+  .model-item .mowner{color:var(--text-3);font-size:.7rem;}
+  .audit-row{border-bottom:1px solid var(--border);padding:8px 2px;font-size:.72rem;}
+  .audit-row .top{display:flex;justify-content:space-between;color:var(--text-1);font-weight:600;}
+  .audit-row .bottom{color:var(--text-3);margin-top:2px;}
+  .audit-row.status-error .top{color:var(--danger);}
+  .info-block{font-size:.76rem;color:var(--text-2);line-height:1.6;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+  .info-block b{color:var(--text-1);}
+  .empty-note{font-size:.76rem;color:var(--text-3);text-align:center;padding:20px 6px;}
+
+  /* ============ MODAL ============ */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;
+    -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:fadeScaleIn .18s ease;
+  }
+  .modal-overlay.hidden{display:none;}
+  .modal{background:var(--bg-app);border:1px solid var(--border);border-radius:16px;width:480px;max-width:92vw;max-height:86vh;overflow-y:auto;box-shadow:var(--shadow-2);animation:fadeScaleIn .22s cubic-bezier(.2,.8,.3,1);}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .modal-header h2{font-size:1rem;}
+  .modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:14px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:.75rem;color:var(--text-2);display:flex;align-items:center;gap:5px;}
+  .field input[type=text],.field input[type=password],.field input[type=number],.field textarea,.field select{
+    background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-1);
+    font-size:.85rem;outline:none;font-family:var(--font-ui);
+  }
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .checkbox-row{display:flex;align-items:center;gap:8px;font-size:.8rem;}
+  .engine-grid{display:flex;flex-wrap:wrap;gap:6px;}
+  .modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--border);}
+  .btn-sm{
+    padding:7px 14px;font-size:.8rem;border-radius:9px;border:1px solid var(--border);background:transparent;
+    color:var(--text-1);cursor:pointer;transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .btn-sm:hover{background:var(--bg-surface);border-color:var(--text-3);}
+  .btn-sm:active{transform:scale(.97);}
+  .btn-sm.primary{background:linear-gradient(135deg, var(--accent), var(--accent-2));color:var(--accent-text);border-color:var(--accent);}
+  .btn-sm.primary:hover{filter:brightness(1.05);}
+  .btn-sm:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .divider{height:1px;background:var(--border);margin:2px 0;}
+  .small-note{font-size:.7rem;color:var(--text-3);line-height:1.55;}
+
+  /* ============ GROUP CHAT ============ */
+  .modal-wide{width:620px;}
+  .group-members-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1;min-width:0;}
+  .member-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--bg-surface);border-radius:999px;padding:4px 11px;font-size:.72rem;font-weight:600;white-space:nowrap;transition:border-color .15s ease;}
+  .member-chip:hover{border-color:var(--text-3);}
+  .member-chip .swatch{width:8px;height:8px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px var(--bg-surface);}
+  .member-name{font-size:.74rem;font-weight:700;margin-bottom:3px;}
+  .member-rows{display:flex;flex-direction:column;gap:8px;}
+  .member-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:var(--bg-surface);border:1px solid var(--border);border-radius:11px;padding:9px;transition:border-color .15s ease;}
+  .member-row:hover{border-color:var(--text-3);}
+  .member-test-status{font-size:.68rem;color:var(--text-3);white-space:nowrap;}
+  .member-pause-toggle{display:inline-flex;align-items:center;gap:3px;font-size:.72rem;color:var(--text-3);cursor:pointer;user-select:none;}
+  .member-row.member-paused{opacity:.55;}
+  .msg.system-note{padding:4px 20px;}
+  .system-note-text{max-width:760px;margin:0 auto;text-align:center;font-size:.7rem;color:var(--text-3);padding:6px 0;font-style:italic;}
+  .conclusion-card{background:var(--accent-soft);border:1px solid var(--accent);box-shadow:var(--shadow-1);border-radius:var(--radius);padding:12px 16px;}
+  .round-summary-card{background:var(--bg-surface);border:1px dashed var(--border);border-radius:var(--radius);padding:9px 14px;font-size:.88rem;}
+  .member-row input[type=color]{width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:6px;background:transparent;flex-shrink:0;cursor:pointer;}
+  .member-row .member-name-input{width:120px;flex-shrink:0;}
+  .member-row .member-model-select{flex:1;min-width:0;}
+  .member-row .member-persona-input{flex:1;min-width:0;}
+  .member-row input,.member-row select{background:var(--bg-app);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text-1);font-size:.78rem;outline:none;font-family:var(--font-ui);}
+  .bulk-model-list{max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:4px;}
+  .bulk-model-row{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:.78rem;border-radius:6px;cursor:pointer;}
+  .bulk-model-row:hover{background:var(--bg-surface);}
+
+  .hidden{display:none !important;}
+  @media (max-width:900px){
+    .dashboard{width:100vw;}
+    .sidebar{position:absolute;z-index:10;height:100%;}
+  }
+</style>
+</head>
+<body data-skin="claude" data-mode="light">
+<div id="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="dot">OR</span><span>OmniRoute Studio</span></div>
+    <button class="btn btn-primary" id="newChatBtn">+ Chat baru</button>
+    <button class="btn btn-outline" id="newGroupBtn">+ Grup baru (multi-model)</button>
+    <button class="btn btn-outline" id="newDiscussionBtn">+ Diskusi baru (rapat/roundtable)</button>
+    <div class="search-box">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="convSearch" placeholder="Cari percakapan...">
+    </div>
+    <div class="conv-list" id="convList"></div>
+    <div class="sidebar-footer">
+      <div class="status-row">
+        <span class="status-badge"><span class="status-dot" id="statusDot"></span><span id="statusText">Belum tersambung</span></span>
+        <button class="icon-btn" id="pingBtn" title="Cek koneksi ke OmniRoute">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </button>
+      </div>
+      <button class="btn btn-outline" id="dashboardToggleBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        Dashboard OmniRoute
+      </button>
+      <button class="btn btn-outline" id="settingsBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09A1.65 1.65 0 0015 4.6a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Pengaturan
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="sidebarToggleBtn" title="Tampilkan/sembunyikan sidebar">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      </button>
+      <select class="select-compact" id="modelSelect" title="Model / provider"></select>
+      <div class="group-members-bar hidden" id="groupMembersBar"></div>
+      <select class="select-compact" id="strategySelect" title="Strategi routing OmniRoute">
+        <option value="auto">Strategi: Auto</option>
+        <option value="priority-queue">Priority queueing</option>
+        <option value="load-balance">Load balancing</option>
+        <option value="cost-optimized">Cost optimized</option>
+        <option value="latency-optimized">Latency optimized</option>
+        <option value="fusion">Fusion (panel voting)</option>
+      </select>
+      <div class="chip" id="compressionChip" title="Aktifkan pipeline kompresi token OmniRoute">Kompresi: mati</div>
+      <div class="topbar-spacer"></div>
+      <div class="skin-toggle" id="skinToggle">
+        <button data-skin="claude" class="active">Claude</button>
+        <button data-skin="chatgpt">ChatGPT</button>
+      </div>
+      <button class="icon-btn" id="modeToggleBtn" title="Terang / gelap">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </header>
+
+    <div class="chat-scroll" id="chatScroll">
+      <div class="welcome" id="welcomeScreen">
+        <div class="dot-lg">OR</div>
+        <h1>OmniRoute Studio</h1>
+        <p>Antarmuka chat mandiri (satu file HTML) untuk gateway <b>OmniRoute</b> — 290+ provider AI di balik satu endpoint OpenAI-compatible. Pilih model, strategi routing, dan kompresi token di atas, lalu mulai mengobrol.</p>
+        <div class="suggestion-grid">
+          <div class="suggestion-card" data-fill="Jelaskan apa itu OmniRoute dan bagaimana cara kerja fallback routing-nya."><b>Tentang OmniRoute</b>Jelaskan fallback routing 4-tingkat</div>
+          <div class="suggestion-card" data-fill="Tuliskan fungsi Python untuk membalik string tanpa fungsi bawaan."><b>Coding</b>Contoh kode dengan syntax block</div>
+          <div class="suggestion-card" data-fill="Buatkan ringkasan singkat tentang keuntungan kompresi token untuk biaya API."><b>Ringkasan</b>Uji rendering markdown</div>
+          <div class="suggestion-card" data-fill="Bandingkan strategi load balancing vs cost optimized untuk tim kecil."><b>Perbandingan</b>Uji strategi routing</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <div class="composer-toolbar">
+          <span class="chip" id="sysPromptBtn">⚙ System prompt</span>
+          <span class="chip" id="tempChip">Temp: 0.7</span>
+          <span class="chip" id="clearConvChip">🗑 Bersihkan chat ini</span>
+          <span class="chip hidden" id="continueDiscussionChip">▶ Lanjutkan diskusi</span>
+        </div>
+        <div id="attachmentPreview" class="attachment-preview hidden"></div>
+        <div id="attachmentQuickActions" class="composer-toolbar hidden"></div>
+        <div class="composer-box">
+          <button class="icon-btn" id="attachBtn" title="Lampirkan gambar atau file teks">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <input type="file" id="fileInput" class="hidden" multiple accept="image/*,text/*,.md,.json,.csv,.log,.py,.js,.ts,.html,.css,.c,.cpp,.java,.go,.rs,.yml,.yaml,.pdf,application/pdf">
+          <textarea id="userInput" rows="1" placeholder="Kirim pesan ke OmniRoute..."></textarea>
+          <button class="send-btn" id="sendBtn" title="Kirim">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          </button>
+        </div>
+        <div class="hint-row">
+          <span>Enter untuk kirim · Shift+Enter baris baru</span>
+          <span id="tokenEstimate">0 token (perkiraan)</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= DASHBOARD PANEL ================= -->
+  <aside class="dashboard" id="dashboard">
+    <div class="dash-header">
+      <span>Dashboard OmniRoute</span>
+      <button class="icon-btn" id="dashCloseBtn">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="dash-tabs">
+      <div class="dash-tab active" data-pane="paneUsage">Sesi</div>
+      <div class="dash-tab" data-pane="paneModels">Provider</div>
+      <div class="dash-tab" data-pane="paneQuota">Kuota</div>
+      <div class="dash-tab" data-pane="paneAudit">Audit Log</div>
+      <div class="dash-tab" data-pane="paneInfo">Fitur</div>
+    </div>
+    <div class="dash-body">
+      <div class="dash-pane active" id="paneUsage">
+        <div class="stat-card"><div class="label">Total permintaan</div><div class="value" id="statRequests">0</div></div>
+        <div class="stat-card"><div class="label">Token prompt / completion</div><div class="value" id="statTokens">0 / 0</div></div>
+        <div class="stat-card">
+          <div class="label">Estimasi token tersimpan via kompresi</div>
+          <div class="value" id="statSaved">0%</div>
+          <div class="bar-track"><div class="bar-fill" id="statSavedBar" style="width:0%"></div></div>
+        </div>
+        <div class="stat-card"><div class="label">Rata-rata latensi</div><div class="value" id="statLatency">– ms</div></div>
+        <div class="small-note">Statistik dihitung lokal di browser dari respons API OmniRoute pada sesi ini (bukan data server OmniRoute itu sendiri).</div>
+      </div>
+      <div class="dash-pane" id="paneQuota">
+        <div class="small-note">OmniRoute punya endpoint kuota/usage sendiri (<code>/api/usage</code>, dll) di luar API <code>/v1</code>, tapi butuh "token manajemen" terpisah (bukan API key chat). Isi di Pengaturan bila punya, lalu cek di sini.</div>
+        <button class="btn-sm" id="checkQuotaBtn">Cek kuota sekarang</button>
+        <div id="quotaResult"></div>
+        <button class="btn-sm" id="openDashboardBtn">Buka Dashboard OmniRoute (tab baru)</button>
+      </div>
+      <div class="dash-pane" id="paneModels">
+        <button class="btn-sm" id="testProvidersBtn">🩺 Tes semua provider (cek yang butuh API key/login)</button>
+        <div id="providerDiagResult"></div>
+        <button class="btn-sm" id="openDashboardFromProviderBtn">Buka Dashboard OmniRoute (untuk hubungkan/kelola API key provider)</button>
+        <div class="divider"></div>
+        <div class="search-box"><input type="text" id="modelSearch" placeholder="Cari model/provider..."></div>
+        <div id="modelList"></div>
+      </div>
+      <div class="dash-pane" id="paneAudit">
+        <div id="auditList"></div>
+      </div>
+      <div class="dash-pane" id="paneInfo">
+        <div class="info-block"><b>Routing</b><br>OmniRoute mendukung ±19 strategi routing (priority queue, load balancing, cost/latency optimized, fusion/panel voting, dsb). Pilih di topbar — dikirim sebagai field <code>omniroute_strategy</code> &amp; header <code>X-OmniRoute-Routing-Strategy</code>. Dukungan tergantung versi/konfigurasi server Anda.</div>
+        <div class="info-block"><b>Kompresi token</b><br>Pipeline kompresi OmniRoute (session dedup, RTK filtering, Caveman prose, LLMLingua-2, dst — 12 engine total) diaktifkan lewat toggle "Kompresi". Kode &amp; JSON tetap byte-perfect.</div>
+        <div class="info-block"><b>Resiliensi</b><br>Circuit breaker, cooldown koneksi, dan lockout per-model ditangani otomatis oleh server OmniRoute saat sebuah provider gagal/limit — tidak perlu logic tambahan di klien ini.</div>
+        <div class="info-block"><b>Endpoint default</b><br><code>http://localhost:20128/v1</code> — jalankan <code>npx omniroute@latest</code> lalu atur Base URL di Pengaturan bila berbeda.</div>
+        <div class="info-block"><b>Provider butuh API key/login?</b><br>Buka tab "Provider" lalu tekan "Tes semua provider" — tiap grup provider (mis. <code>aug/*</code>, <code>tllm/*</code>, <code>oc/*</code>) dicek sekali dan ditandai 🟢/🔴 beserta alasannya. Kalau 🔴, biasanya provider itu perlu dihubungkan (API key/login/CLI) langsung di dashboard bawaan OmniRoute — bukan di aplikasi chat ini, karena kredensial provider disimpan &amp; dikelola oleh OmniRoute sendiri.</div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ================= SETTINGS MODAL ================= -->
+<div class="modal-overlay hidden" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-header"><h2>Pengaturan</h2><button class="icon-btn" id="closeSettingsBtn">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Base URL OmniRoute</label>
+        <input type="text" id="baseUrlInput" placeholder="http://localhost:20128/v1">
+      </div>
+      <div class="field">
+        <label>API Key (opsional, disimpan lokal di browser)</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-...">
+      </div>
+      <div class="field">
+        <label>Token manajemen OmniRoute (opsional, khusus untuk cek kuota di tab "Kuota")</label>
+        <input type="password" id="managementTokenInput" placeholder="Token admin/manajemen OmniRoute Anda">
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Temperature</label><input type="number" id="tempInput" min="0" max="2" step="0.1" value="0.7"></div>
+        <div class="field"><label>Top P</label><input type="number" id="topPInput" min="0" max="1" step="0.05" value="1"></div>
+        <div class="field"><label>Max tokens</label><input type="number" id="maxTokensInput" min="1" step="1" value="4096"></div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>
+          <input type="checkbox" id="compressionEnabledInput"> Aktifkan pipeline kompresi token
+        </label>
+        <div class="engine-grid">
+          <label class="chip"><input type="checkbox" class="engine-cb" value="session-dedup" style="margin-right:5px;">Session dedup</label>
+          <label class="chip"><input type="checkbox" class="engine-cb" value="rtk-filter" style="margin-right:5px;">RTK filtering</label>
+          <label class="chip"><input type="checkbox" class="engine-cb" value="caveman-prose" style="margin-right:5px;">Caveman prose</label>
+          <label class="chip"><input type="checkbox" class="engine-cb" value="llmlingua2" style="margin-right:5px;">LLMLingua-2</label>
+        </div>
+        <div class="small-note">Dikirim sebagai hint (field JSON + header). Nama parameter final mengikuti dokumentasi versi OmniRoute Anda.</div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Data</label>
+        <div class="field-row">
+          <button class="btn-sm" id="exportAllBtn">Ekspor semua chat (JSON)</button>
+          <button class="btn-sm" id="importAllBtn">Impor JSON</button>
+        </div>
+        <input type="file" id="importFileInput" accept="application/json" class="hidden">
+        <button class="btn-sm" id="clearAllBtn" style="color:var(--danger);border-color:var(--danger);">Hapus semua data lokal</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" id="cancelSettingsBtn">Batal</button>
+      <button class="btn-sm primary" id="saveSettingsBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SYSTEM PROMPT MODAL ================= -->
+<div class="modal-overlay hidden" id="sysPromptOverlay">
+  <div class="modal">
+    <div class="modal-header"><h2>System prompt (percakapan ini)</h2><button class="icon-btn" id="closeSysPromptBtn">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <textarea id="sysPromptInput" rows="6" placeholder="Contoh: Kamu adalah asisten yang menjawab singkat dan langsung ke inti."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" id="cancelSysPromptBtn">Batal</button>
+      <button class="btn-sm primary" id="saveSysPromptBtn">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= GROUP CHAT MODAL ================= -->
+<div class="modal-overlay hidden" id="groupModalOverlay">
+  <div class="modal modal-wide">
+    <div class="modal-header"><h2 id="groupModalTitle">Grup chat baru</h2><button class="icon-btn" id="closeGroupModalBtn">✕</button></div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Nama grup</label>
+        <input type="text" id="groupTitleInput" placeholder="Contoh: Tempat Curhat">
+      </div>
+      <div class="field">
+        <label>Topik / konteks grup (opsional)</label>
+        <textarea id="groupTopicInput" rows="3" placeholder="Contoh: Ini forum curhat santai. Tanggapi cerita pengguna dengan empati dan suportif."></textarea>
+      </div>
+      <div class="field" id="groupReplyModeField">
+        <label>Mode balasan</label>
+        <select id="groupReplyModeSelect">
+          <option value="random_some">Beberapa acak yang balas (paling natural, seperti grup chat asli)</option>
+          <option value="random1">Cuma 1 orang acak yang balas</option>
+          <option value="all">Semua anggota selalu balas (buat bandingkan banyak model sekaligus)</option>
+        </select>
+        <div class="small-note">Ketik <code>@nama</code> di pesan selalu bisa nargetin satu anggota tertentu, apapun mode-nya di sini.</div>
+      </div>
+      <div class="field hidden" id="discussionSettingsField">
+        <div class="field-row">
+          <div class="field"><label>Jumlah putaran diskusi</label><input type="number" id="discussionRoundsInput" min="1" max="10" step="1" value="3"></div>
+          <div class="field"><label>Model untuk kesimpulan</label><select id="discussionConclusionModelSelect"></select></div>
+        </div>
+        <div class="small-note">Tiap putaran, <b>semua anggota aktif</b> bicara satu per satu membahas topik yang kamu kirim — seperti rapat meja bundar. Setelah putaran terakhir, sebuah model (default "auto") membuat kesimpulan diskusinya secara otomatis.</div>
+        <label class="checkbox-row"><input type="checkbox" id="discussionSummarizeRoundsInput"> Ringkasan singkat tiap putaran (butuh 1 panggilan API ekstra per putaran)</label>
+        <label class="checkbox-row"><input type="checkbox" id="discussionRequestVotesInput" checked> Minta posisi/vote tiap anggota di bagian kesimpulan (setuju/tidak setuju + alasan)</label>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Bentuk tim otomatis (opsional, ganti anggota di bawah)</label>
+        <div class="field-row">
+          <select id="teamTemplateSelect">
+            <option value="">Tanpa template (nama sesuai model)</option>
+            <option value="brainstorm">Tim Brainstorm</option>
+            <option value="review">Panel Review Teknis</option>
+            <option value="keputusan">Rapat Pengambilan Keputusan</option>
+          </select>
+          <input type="number" id="autoTeamSizeInput" min="2" max="8" value="4" title="Jumlah anggota target">
+          <button class="btn-sm" id="autoPickTeamBtn">🎯 Auto-pilih model terbaik</button>
+        </div>
+        <div class="small-note">Model dengan nama yang sama (lewat provider/jalur berbeda) dianggap satu dulu, baru diuji koneksinya satu per satu — jadi tidak menguji hal yang sama berkali-kali. Semua yang benar-benar terhubung dianalisis (kemampuan reasoning, ukuran konteks, kecepatan respons), diurutkan dari yang terbaik, baru diambil sejumlah target. Kalau yang terhubung lebih sedikit dari target, yang terbaik dari yang ada tetap dipakai.</div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label><span id="memberSectionLabel">Anggota grup</span> — <span id="memberCountLabel">0 anggota</span> (minimal 2, tiap anggota bisa pakai model berbeda, tier tinggi/berbayar juga boleh)</label>
+        <div id="memberRows" class="member-rows"></div>
+        <div class="field-row">
+          <button class="btn-sm" id="addMemberBtn">+ Tambah anggota</button>
+          <button class="btn-sm" id="testAllMembersBtn">🔌 Tes semua anggota</button>
+        </div>
+        <div id="kickedMembersSection" class="hidden">
+          <div class="small-note" style="margin-top:8px;"><b>Pernah dikeluarkan otomatis (tidak merespons saat itu):</b></div>
+          <div id="kickedMemberRows" class="member-rows" style="margin-top:6px;"></div>
+        </div>
+        <div class="small-note">Tiap anggota membalas satu per satu secara berurutan dan bisa melihat balasan anggota lain sebelum gilirannya — supaya mereka bisa saling menanggapi. Ketik <code>@nama</code> di awal pesan untuk hanya menyapa satu anggota tertentu. Model yang tidak merespons saat chat berjalan akan <b>otomatis dikeluarkan dari grup</b> supaya cuma yang benar-benar aktif yang tersisa. Khusus mode diskusi: peran <b>Notulen</b> tidak ikut berdebat — dia cuma bikin ringkasan tiap putaran &amp; kesimpulan akhir pakai model &amp; namanya sendiri.</div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Tambah cepat dari model yang tersedia di OmniRoute</label>
+        <div class="search-box"><input type="text" id="groupBulkSearch" placeholder="Cari model untuk ditambahkan..."></div>
+        <label class="checkbox-row"><input type="checkbox" id="groupBulkFreeOnly"> Hanya tampilkan yang gratis</label>
+        <div id="groupBulkList" class="bulk-model-list"></div>
+        <div class="field-row">
+          <button class="btn-sm" id="addBulkModelsBtn">+ Tambahkan model terpilih</button>
+          <button class="btn-sm" id="addAllFreeModelsBtn">+ Tambahkan SEMUA model gratis</button>
+          <button class="btn-sm" id="addAllAnyModelsBtn">+ Tes &amp; tambahkan SEMUA model tersedia</button>
+        </div>
+        <div class="small-note">"Gratis" ditandai berdasarkan pola nama model &amp; penyedia yang diketahui gratis (mis. berakhiran <code>-free</code>, atau via DuckDuckGo AI Chat) — bukan data resmi dari OmniRoute, karena API-nya tidak mengekspos status berbayar/gratis secara eksplisit. Semua tombol "Tambahkan" di atas menguji koneksi tiap model dulu (request kecil &amp; hemat token) — yang tidak menjawab otomatis dilewati, tidak ikut ditambahkan. Model reasoning berat kadang butuh lebih banyak token untuk mulai menjawab, jadi sesekali bisa salah terdeteksi gagal padahal sebenarnya jalan — tinggal tes ulang manual di baris anggotanya kalau begitu.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sm" id="deleteGroupBtn" style="color:var(--danger);border-color:var(--danger);margin-right:auto;">Hapus grup ini</button>
+      <button class="btn-sm hidden" id="exportMdBtn">⬇ Ekspor Markdown</button>
+      <button class="btn-sm" id="cancelGroupModalBtn">Batal</button>
+      <button class="btn-sm primary" id="saveGroupModalBtn">Simpan grup</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ STATE ============ */
+  const STORE_KEY = "omniroute_studio_v1";
+  const defaultSettings = {
+    baseUrl: "http://localhost:20128/v1",
+    apiKey: "",
+    managementToken: "",
+    model: "auto",
+    temperature: 0.7,
+    topP: 1,
+    maxTokens: 4096,
+    strategy: "auto",
+    compressionEnabled: false,
+    compressionEngines: [],
+    skin: "claude",
+    mode: "light"
+  };
+
+  let state = loadState();
+  let abortController = null;
+  let modelsCache = [];
+
+  const MEMBER_PALETTE = ["#D97757","#4C6EF5","#12B886","#F59F00","#E64980","#7048E8","#15AABF","#82C91E"];
+
+  const ROLE_TEMPLATES = [
+    { name:"Pendukung", persona:"Optimis dan mendukung ide baru. Cari sisi positif dan peluang dari setiap gagasan, tapi tetap jujur kalau ada yang kurang masuk akal." },
+    { name:"Skeptis", persona:"Kritis dan hati-hati. Tugasmu mencari kelemahan, risiko, dan pertanyaan yang belum terjawab dari setiap gagasan — bukan untuk menolak semuanya, tapi supaya keputusan lebih matang." },
+    { name:"Pragmatis", persona:"Fokus ke eksekusi: biaya, waktu, sumber daya, dan langkah konkret. Selalu tanya 'bagaimana caranya' dan 'apa langkah pertamanya'." },
+    { name:"Out-of-the-box", persona:"Suka pendekatan tidak biasa. Tawarkan sudut pandang atau solusi yang belum kepikiran orang lain, meski terdengar aneh di awal." },
+    { name:"Pakar Data", persona:"Selalu minta bukti, angka, dan data pendukung. Waspada terhadap klaim tanpa dasar." },
+    { name:"Advokat Pengguna", persona:"Selalu bicara dari sudut pandang pengguna/pelanggan akhir — apakah ini benar-benar membantu mereka?" },
+    { name:"Fasilitator", persona:"Jaga diskusi tetap on-topic, rangkum benang merah sejauh ini sesekali, dan pastikan sudut pandang yang berbeda didengar." }
+  ];
+  const TEAM_TEMPLATES = {
+    brainstorm: { label:"Tim Brainstorm", roles:["Pendukung","Skeptis","Pragmatis","Out-of-the-box"] },
+    review: { label:"Panel Review Teknis", roles:["Pakar Data","Advokat Pengguna","Pragmatis","Skeptis"] },
+    keputusan: { label:"Rapat Pengambilan Keputusan", roles:["Pendukung","Skeptis","Pragmatis","Fasilitator"] }
+  };
+  let groupModalMembers = [];
+  let groupModalKickedMembers = [];
+  let groupModalEditingId = null;
+  let groupModalMode = "group";
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if(raw){
+        const parsed = JSON.parse(raw);
+        parsed.settings = Object.assign({}, defaultSettings, parsed.settings||{});
+        if(!Array.isArray(parsed.conversations)) parsed.conversations = [];
+        if(!Array.isArray(parsed.auditLog)) parsed.auditLog = [];
+        if(!parsed.activeId) parsed.activeId = null;
+        return parsed;
+      }
+    }catch(e){}
+    return { settings: Object.assign({}, defaultSettings), conversations: [], auditLog: [], activeId: null };
+  }
+  function saveState(){
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  /* ============ DOM REFS ============ */
+  const $ = (id) => document.getElementById(id);
+  const sidebar = $("sidebar");
+  const convList = $("convList");
+  const convSearch = $("convSearch");
+  const chatScroll = $("chatScroll");
+  const welcomeScreen = $("welcomeScreen");
+  const userInput = $("userInput");
+  const sendBtn = $("sendBtn");
+  const modelSelect = $("modelSelect");
+  const strategySelect = $("strategySelect");
+  const compressionChip = $("compressionChip");
+  const statusDot = $("statusDot");
+  const statusText = $("statusText");
+  const dashboard = $("dashboard");
+  const tokenEstimate = $("tokenEstimate");
+  const tempChip = $("tempChip");
+  const groupMembersBar = $("groupMembersBar");
+  const attachBtn = $("attachBtn");
+  const fileInput = $("fileInput");
+  const attachmentPreview = $("attachmentPreview");
+  let pendingAttachments = [];
+
+  /* ============ THEME ============ */
+  function applyTheme(){
+    document.body.setAttribute("data-skin", state.settings.skin);
+    document.body.setAttribute("data-mode", state.settings.mode);
+    document.querySelectorAll("#skinToggle button").forEach(b=>{
+      b.classList.toggle("active", b.dataset.skin === state.settings.skin);
+    });
+  }
+  $("skinToggle").addEventListener("click", (e)=>{
+    const btn = e.target.closest("button");
+    if(!btn) return;
+    state.settings.skin = btn.dataset.skin;
+    saveState(); applyTheme(); renderMessages();
+  });
+  $("modeToggleBtn").addEventListener("click", ()=>{
+    state.settings.mode = state.settings.mode === "light" ? "dark" : "light";
+    saveState(); applyTheme();
+  });
+  $("sidebarToggleBtn").addEventListener("click", ()=> sidebar.classList.toggle("collapsed"));
+
+  /* ============ MARKDOWN RENDERER ============ */
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function inlineMd(text){
+    let t = escapeHtml(text);
+    t = t.replace(/`([^`]+)`/g, (m,c)=>`<code class="inline-code">${c}</code>`);
+    t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    t = t.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, "$1<em>$2</em>");
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return t;
+  }
+  function renderMarkdown(raw){
+    const codeBlocks = [];
+    let src = raw.replace(/```(\w*)\r?\n([\s\S]*?)```/g, (m, lang, code)=>{
+      codeBlocks.push({lang: lang||"text", code: code.replace(/\n$/,"")});
+      return " CB" + (codeBlocks.length-1) + " ";
+    });
+    const lines = src.split("\n");
+    let html = "", inUl=false, inOl=false, para=[];
+    function flushPara(){ if(para.length){ html += "<p>"+inlineMd(para.join(" "))+"</p>"; para=[]; } }
+    function closeLists(){ if(inUl){html+="</ul>";inUl=false;} if(inOl){html+="</ol>";inOl=false;} }
+    for(let line of lines){
+      const cbMatch = line.trim().match(/^ CB(\d+) $/);
+      if(cbMatch){
+        flushPara(); closeLists();
+        const {lang, code} = codeBlocks[parseInt(cbMatch[1])];
+        const codeId = "cb_"+uid();
+        const isPreviewable = /^(html|svg)$/i.test(lang.trim());
+        html += `<div class="code-block"><div class="code-block-header"><span>${escapeHtml(lang)}</span><span class="code-block-actions">${isPreviewable ? `<button class="copy-btn" onclick="window.__previewCode('${codeId}')">Pratinjau</button>` : ""}<button class="copy-btn" onclick="window.__downloadCode('${codeId}','${escapeHtml(lang)}')">Unduh</button><button class="copy-btn" onclick="window.__copyCode('${codeId}',this)">Copy</button></span></div><pre><code id="${codeId}">${escapeHtml(code)}</code></pre></div>`;
+        continue;
+      }
+      if(/^#{1,3}\s/.test(line)){
+        flushPara(); closeLists();
+        const level = line.match(/^#+/)[0].length;
+        html += `<h${level}>${inlineMd(line.replace(/^#+\s*/,""))}</h${level}>`;
+        continue;
+      }
+      if(/^\s*[-*]\s+/.test(line)){
+        flushPara();
+        if(inOl){html+="</ol>";inOl=false;}
+        if(!inUl){html+="<ul>";inUl=true;}
+        html += `<li>${inlineMd(line.replace(/^\s*[-*]\s+/,""))}</li>`;
+        continue;
+      }
+      if(/^\s*\d+\.\s+/.test(line)){
+        flushPara();
+        if(inUl){html+="</ul>";inUl=false;}
+        if(!inOl){html+="<ol>";inOl=true;}
+        html += `<li>${inlineMd(line.replace(/^\s*\d+\.\s+/,""))}</li>`;
+        continue;
+      }
+      if(/^\s*>\s?/.test(line)){
+        flushPara(); closeLists();
+        html += `<blockquote>${inlineMd(line.replace(/^\s*>\s?/,""))}</blockquote>`;
+        continue;
+      }
+      if(line.trim()===""){ flushPara(); closeLists(); continue; }
+      para.push(line);
+    }
+    flushPara(); closeLists();
+    return html || "<p></p>";
+  }
+  window.__copyCode = function(id, btn){
+    const el = document.getElementById(id);
+    if(!el) return;
+    navigator.clipboard.writeText(el.textContent).then(()=>{
+      const old = btn.textContent; btn.textContent="Copied!";
+      setTimeout(()=>btn.textContent=old, 1200);
+    });
+  };
+  const CODE_EXT = { python:"py", py:"py", javascript:"js", js:"js", typescript:"ts", ts:"ts",
+    html:"html", css:"css", json:"json", java:"java", c:"c", cpp:"cpp", "c++":"cpp", csharp:"cs",
+    "c#":"cs", php:"php", ruby:"rb", go:"go", rust:"rs", sql:"sql", bash:"sh", sh:"sh", shell:"sh",
+    yaml:"yml", yml:"yml", xml:"xml", markdown:"md", md:"md" };
+  window.__downloadCode = function(id, lang){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const ext = CODE_EXT[(lang||"").toLowerCase()] || "txt";
+    const blob = new Blob([el.textContent], {type:"text/plain"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "snippet." + ext;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  };
+  window.__previewCode = function(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    const blob = new Blob([el.textContent], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(()=>URL.revokeObjectURL(url), 30000);
+  };
+  function renderMathIfAvailable(el){
+    if(!el || typeof window.renderMathInElement !== "function") return;
+    try{
+      window.renderMathInElement(el, {
+        delimiters: [
+          {left:"$$", right:"$$", display:true},
+          {left:"\\[", right:"\\]", display:true},
+          {left:"\\(", right:"\\)", display:false},
+          {left:"$", right:"$", display:false}
+        ],
+        throwOnError:false
+      });
+    }catch(e){ /* math rendering is best-effort */ }
+  }
+
+  /* ============ CONVERSATIONS ============ */
+  function activeConv(){
+    return state.conversations.find(c=>c.id===state.activeId) || null;
+  }
+  function newChat(){
+    const conv = {
+      id: uid(), type: "single", title: "Chat baru", createdAt: Date.now(), updatedAt: Date.now(),
+      systemPrompt: "", messages: []
+    };
+    state.conversations.unshift(conv);
+    state.activeId = conv.id;
+    saveState(); renderSidebar(); renderMessages();
+    userInput.focus();
+  }
+  function deleteChat(id, ev){
+    if(ev) ev.stopPropagation();
+    if(!confirm("Hapus percakapan ini?")) return;
+    state.conversations = state.conversations.filter(c=>c.id!==id);
+    if(state.activeId===id) state.activeId = state.conversations[0]?.id || null;
+    saveState(); renderSidebar(); renderMessages();
+  }
+  function renameChat(id, ev){
+    if(ev) ev.stopPropagation();
+    const conv = state.conversations.find(c=>c.id===id);
+    if(!conv) return;
+    const t = prompt("Nama baru:", conv.title);
+    if(t && t.trim()){ conv.title = t.trim(); saveState(); renderSidebar(); }
+  }
+  function selectChat(id){
+    state.activeId = id; saveState(); renderSidebar(); renderMessages();
+  }
+
+  function groupLabel(ts){
+    const d = new Date(ts), now = new Date();
+    const days = Math.floor((now.setHours(0,0,0,0) - new Date(ts).setHours(0,0,0,0)) / 86400000);
+    if(days<=0) return "Hari ini";
+    if(days===1) return "Kemarin";
+    if(days<=7) return "7 hari terakhir";
+    if(days<=30) return "30 hari terakhir";
+    return "Lebih lama";
+  }
+
+  function renderSidebar(){
+    const q = convSearch.value.trim().toLowerCase();
+    const filtered = state.conversations.filter(c => !q || c.title.toLowerCase().includes(q));
+    convList.innerHTML = "";
+    let lastGroup = null;
+    filtered.forEach(conv=>{
+      const g = groupLabel(conv.updatedAt);
+      if(g !== lastGroup){
+        const lbl = document.createElement("div");
+        lbl.className = "conv-group-label"; lbl.textContent = g;
+        convList.appendChild(lbl); lastGroup = g;
+      }
+      const item = document.createElement("div");
+      item.className = "conv-item" + (conv.id===state.activeId ? " active":"");
+      const prefix = conv.type==="group" ? "👥 " : conv.type==="discussion" ? "💼 " : "";
+      item.innerHTML = `<span class="conv-title">${prefix}${escapeHtml(conv.title)}</span>
+        <span class="conv-actions">
+          <button class="icon-btn rename-btn" title="Ganti nama">✎</button>
+          <button class="icon-btn del-btn" title="Hapus">🗑</button>
+        </span>`;
+      item.addEventListener("click", ()=>selectChat(conv.id));
+      item.querySelector(".rename-btn").addEventListener("click", (e)=>renameChat(conv.id,e));
+      item.querySelector(".del-btn").addEventListener("click", (e)=>deleteChat(conv.id,e));
+      convList.appendChild(item);
+    });
+    if(filtered.length===0){
+      convList.innerHTML = '<div class="empty-note">Belum ada percakapan</div>';
+    }
+  }
+  convSearch.addEventListener("input", renderSidebar);
+
+  /* ============ MESSAGE RENDERING ============ */
+  function renderMessages(){
+    const conv = activeConv();
+    syncTopbarForConv(conv);
+    updateContinueDiscussionChip(conv);
+    chatScroll.innerHTML = "";
+    if(!conv || conv.messages.length===0){
+      chatScroll.appendChild(welcomeScreen);
+      welcomeScreen.classList.remove("hidden");
+      return;
+    }
+    welcomeScreen.classList.add("hidden");
+    conv.messages.forEach(m => chatScroll.appendChild(buildMessageEl(m)));
+    chatScroll.scrollTop = chatScroll.scrollHeight;
+  }
+  function updateContinueDiscussionChip(conv){
+    const chip = $("continueDiscussionChip");
+    const lastMsg = conv && conv.messages.length ? conv.messages[conv.messages.length-1] : null;
+    const show = conv && conv.type==="discussion" && lastMsg && lastMsg.isConclusion && !abortController;
+    chip.classList.toggle("hidden", !show);
+  }
+
+  function syncTopbarForConv(conv){
+    if(conv && (conv.type==="group" || conv.type==="discussion")){
+      const isDiscussion = conv.type==="discussion";
+      modelSelect.classList.add("hidden");
+      groupMembersBar.classList.remove("hidden");
+      const kickedCount = conv.kickedMembers?.length || 0;
+      const icon = isDiscussion ? "💼" : "👥";
+      const title = isDiscussion ? "Klik untuk kelola diskusi" : "Klik untuk kelola anggota grup";
+      groupMembersBar.innerHTML = `<button class="btn-sm" id="manageMembersBtn" title="${title}">${icon} ${conv.members.length} model${kickedCount ? ` · ${kickedCount} nonaktif` : ""}</button>`;
+      const manageBtn = $("manageMembersBtn");
+      if(manageBtn) manageBtn.addEventListener("click", ()=>openGroupModal(conv));
+      userInput.placeholder = isDiscussion
+        ? "Kasih topik diskusi... (mis. \"Apakah kita harus pivot ke B2B?\")"
+        : "Curhat ke grup... (ketik @nama untuk membalas satu anggota saja)";
+    } else {
+      modelSelect.classList.remove("hidden");
+      groupMembersBar.classList.add("hidden");
+      groupMembersBar.innerHTML = "";
+      userInput.placeholder = "Kirim pesan ke OmniRoute...";
+    }
+  }
+
+  function buildMessageEl(m){
+    const row = document.createElement("div");
+    row.className = "msg role-"+m.role;
+    row.dataset.id = m.id;
+    if(m.role === "system-note"){
+      row.className = "msg system-note";
+      row.innerHTML = `<div class="system-note-text">${escapeHtml(m.content)}</div>`;
+      return row;
+    }
+    const isUser = m.role === "user";
+    const avatarChar = isUser ? "U" : (m.memberName ? m.memberName.slice(0,2).toUpperCase() : "OR");
+    const avatarStyle = !isUser && m.memberColor ? ` style="background:${m.memberColor};color:#fff;"` : "";
+    const metaText = m.role==="assistant" && m.meta
+      ? `${m.meta.tokens ?? "–"} token · ${m.meta.latency ?? "–"} ms · ${escapeHtml(m.meta.model||"")}`
+      : "";
+    const memberTag = m.isConclusion
+      ? `<div class="member-name" style="color:var(--accent)">📋 Kesimpulan Diskusi${m.notulenName ? ` — oleh ${escapeHtml(m.notulenName)}` : ""}</div>`
+      : m.isRoundSummary
+      ? `<div class="member-name" style="color:var(--text-3)">📝 ${m.notulenName ? escapeHtml(m.notulenName) : "Catatan Notulen"} — Ronde ${m.meta?.round||""}</div>`
+      : (m.memberName ? `<div class="member-name" style="color:${m.memberColor||'var(--accent)'}">${escapeHtml(m.memberName)}${m.roleTag ? ` <span style="color:var(--text-3);font-weight:400;">(${m.roleTag})</span>` : ""}</div>` : "");
+    const imageTag = Array.isArray(m.images) && m.images.length
+      ? `<div class="msg-image-grid">${m.images.map(im=>`<img src="${im.dataUri}" alt="${escapeHtml(im.name||'lampiran')}" class="msg-image">`).join("")}</div>`
+      : "";
+    row.innerHTML = `
+      <div class="msg-inner">
+        <div class="avatar"${avatarStyle}>${m.isConclusion ? "📋" : m.isRoundSummary ? "📝" : avatarChar}</div>
+        <div class="bubble${m.isConclusion ? ' conclusion-card' : m.isRoundSummary ? ' round-summary-card' : ''}">
+          ${memberTag}
+          ${imageTag}
+          <div class="content">${renderMarkdown(m.content||"")}</div>
+          <div class="msg-meta">
+            <span>${metaText}</span>
+            <span class="msg-actions">
+              <button class="icon-btn copy-msg-btn" title="Salin">⧉</button>
+              ${m.role==="assistant" ? '<button class="icon-btn regen-btn" title="Ulangi">↻</button>' : '<button class="icon-btn edit-btn" title="Edit &amp; kirim ulang">✎</button>'}
+              <button class="icon-btn del-msg-btn" title="Hapus">🗑</button>
+            </span>
+          </div>
+        </div>
+      </div>`;
+    renderMathIfAvailable(row.querySelector(".content"));
+    row.querySelector(".copy-msg-btn").addEventListener("click", ()=>{
+      navigator.clipboard.writeText(m.content);
+    });
+    row.querySelector(".del-msg-btn").addEventListener("click", ()=>{
+      const conv = activeConv();
+      conv.messages = conv.messages.filter(x=>x.id!==m.id);
+      saveState(); renderMessages();
+    });
+    if(m.role==="assistant"){
+      row.querySelector(".regen-btn").addEventListener("click", ()=>regenerate(m.id));
+    } else {
+      row.querySelector(".edit-btn").addEventListener("click", ()=>{
+        userInput.value = m.content;
+        const conv = activeConv();
+        const idx = conv.messages.findIndex(x=>x.id===m.id);
+        conv.messages = conv.messages.slice(0, idx);
+        saveState(); renderMessages(); autoResize(); userInput.focus();
+      });
+    }
+    return row;
+  }
+
+  /* ============ COMPOSER ============ */
+  function autoResize(){
+    userInput.style.height = "auto";
+    userInput.style.height = Math.min(userInput.scrollHeight, 200) + "px";
+    tokenEstimate.textContent = Math.ceil(userInput.value.length/4) + " token (perkiraan)";
+  }
+  userInput.addEventListener("input", autoResize);
+  userInput.addEventListener("keydown", (e)=>{
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); handleSend(); }
+  });
+  sendBtn.addEventListener("click", ()=>{
+    if(abortController){ abortController.abort(); return; }
+    handleSend();
+  });
+  $("newChatBtn").addEventListener("click", newChat);
+  document.querySelectorAll(".suggestion-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      userInput.value = card.dataset.fill; autoResize(); handleSend();
+    });
+  });
+  $("clearConvChip").addEventListener("click", ()=>{
+    const conv = activeConv();
+    if(!conv) return;
+    if(!confirm("Bersihkan semua pesan di chat ini?")) return;
+    conv.messages = []; saveState(); renderMessages();
+  });
+  $("continueDiscussionChip").addEventListener("click", ()=>{
+    const conv = activeConv();
+    if(!conv || conv.type!=="discussion" || abortController) return;
+    if(debateMembers(conv).length===0){
+      alert("Tidak ada anggota aktif. Buka \"Kelola diskusi\" dulu untuk menambah/aktifkan anggota.");
+      return;
+    }
+    pushSystemNote(conv, `▶ Melanjutkan diskusi (${conv.discussionRounds||3} putaran lagi)...`);
+    saveState(); renderMessages();
+    runDiscussion(conv);
+  });
+
+  /* ============ FILE ATTACHMENT ============ */
+  const TEXT_FILE_RE = /\.(txt|md|json|csv|log|py|js|ts|html|css|c|cpp|java|go|rs|yml|yaml|xml|sh)$/i;
+  attachBtn.addEventListener("click", ()=> fileInput.click());
+  async function extractPdfText(file){
+    if(!window.pdfjsLib) throw new Error("Pembaca PDF (pdf.js) belum termuat — cek koneksi internet lalu coba lagi.");
+    const buf = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    let text = "";
+    const maxPages = Math.min(pdf.numPages, 30);
+    let pagesRead = 0;
+    for(let i=1; i<=maxPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it=>it.str).join(" ") + "\n\n";
+      pagesRead = i;
+      if(text.length > 60000) break;
+    }
+    return { text: text.slice(0, 60000).trim(), pagesRead, totalPages: pdf.numPages };
+  }
+  const QUICK_ACTIONS = [
+    { label: "📄 Ringkas isi", prompt: "Ringkas isi utama file yang saya lampirkan ini dalam beberapa poin singkat." },
+    { label: "🔍 Poin-poin penting", prompt: "Analisis file yang saya lampirkan, sebutkan poin-poin/temuan paling penting di dalamnya." },
+    { label: "⚠️ Cari masalah/risiko", prompt: "Tinjau file yang saya lampirkan, cari potensi masalah, risiko, atau kekurangan yang perlu diperhatikan." },
+    { label: "🧾 Ekstrak data", prompt: "Dari file yang saya lampirkan, ekstrak data/angka/fakta penting ke dalam bentuk tabel atau daftar terstruktur." }
+  ];
+  fileInput.addEventListener("change", ()=>{
+    const files = [...fileInput.files];
+    fileInput.value = "";
+    files.forEach(addAttachmentFile);
+  });
+  function addAttachmentFile(file){
+    const MAX_BYTES = 15 * 1024 * 1024;
+    if(file.size > MAX_BYTES){ alert(`"${file.name}" terlalu besar (maks 15MB), dilewati.`); return; }
+    const attId = uid();
+    const isPdf = file.type==="application/pdf" || /\.pdf$/i.test(file.name);
+    if(file.type.startsWith("image/")){
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        pendingAttachments.push({ id:attId, type:"image", kind:"image", name:file.name, dataUri:reader.result });
+        renderAttachmentPreview();
+      };
+      reader.readAsDataURL(file);
+    } else if(isPdf){
+      pendingAttachments.push({ id:attId, type:"text", kind:"pdf", name:file.name, text:"", loading:true });
+      renderAttachmentPreview();
+      extractPdfText(file).then(({text, pagesRead, totalPages})=>{
+        const att = pendingAttachments.find(a=>a.id===attId);
+        if(!att) return; // removed meanwhile
+        if(!text){
+          alert(`Tidak ada teks yang bisa diekstrak dari "${file.name}" (mungkin hasil scan gambar tanpa OCR).`);
+          pendingAttachments = pendingAttachments.filter(a=>a.id!==attId);
+          renderAttachmentPreview();
+          return;
+        }
+        att.text = text; att.loading = false;
+        att.pageInfo = pagesRead < totalPages ? `${pagesRead} dari ${totalPages} halaman diekstrak` : `${totalPages} halaman`;
+        renderAttachmentPreview();
+      }).catch(err=>{
+        alert(`Gagal membaca "${file.name}": ` + err.message);
+        pendingAttachments = pendingAttachments.filter(a=>a.id!==attId);
+        renderAttachmentPreview();
+      });
+    } else if(file.type.startsWith("text/") || TEXT_FILE_RE.test(file.name)){
+      const reader = new FileReader();
+      reader.onload = ()=>{
+        pendingAttachments.push({ id:attId, type:"text", kind:"code", name:file.name, text:String(reader.result).slice(0,40000) });
+        renderAttachmentPreview();
+      };
+      reader.readAsText(file);
+    } else {
+      alert(`Tipe file "${file.name}" belum didukung. Coba gambar (jpg/png/dst), PDF, atau file teks/kode (txt, md, json, py, js, dll).`);
+    }
+  }
+  function renderAttachmentPreview(){
+    if(pendingAttachments.length===0){
+      attachmentPreview.classList.add("hidden"); attachmentPreview.innerHTML = "";
+      $("attachmentQuickActions").classList.add("hidden"); $("attachmentQuickActions").innerHTML = "";
+      return;
+    }
+    attachmentPreview.classList.remove("hidden");
+    attachmentPreview.innerHTML = pendingAttachments.map(att=>{
+      const thumb = att.type==="image"
+        ? `<img src="${att.dataUri}" alt="">`
+        : `<span class="att-icon">${att.loading ? "⏳" : att.kind==="pdf" ? "📕" : "📄"}</span>`;
+      const statusText = att.loading ? " (mengekstrak teks PDF...)"
+        : att.kind==="pdf" ? ` (PDF, ${escapeHtml(att.pageInfo||"")})`
+        : att.type==="text" ? " (teks)"
+        : " (gambar)";
+      return `<span class="attachment-item" data-att-id="${att.id}"><span class="att-name-wrap">${thumb}</span><span class="att-name">${escapeHtml(att.name)}${statusText}</span><button class="att-remove" data-remove-id="${att.id}" title="Hapus lampiran">✕</button></span>`;
+    }).join("");
+    attachmentPreview.querySelectorAll("[data-remove-id]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        pendingAttachments = pendingAttachments.filter(a=>a.id!==btn.dataset.removeId);
+        renderAttachmentPreview();
+      });
+    });
+
+    const hasNonLoadingFile = pendingAttachments.some(a=>a.type==="text" && !a.loading);
+    const qa = $("attachmentQuickActions");
+    if(hasNonLoadingFile){
+      qa.classList.remove("hidden");
+      qa.innerHTML = QUICK_ACTIONS.map(qa2=>`<span class="chip quick-action-chip">${qa2.label}</span>`).join("");
+      qa.querySelectorAll(".quick-action-chip").forEach((chip, i)=>{
+        chip.addEventListener("click", ()=>{
+          userInput.value = QUICK_ACTIONS[i].prompt;
+          autoResize();
+          userInput.focus();
+        });
+      });
+    } else {
+      qa.classList.add("hidden"); qa.innerHTML = "";
+    }
+  }
+
+  function handleSend(){
+    const rawText = userInput.value.trim();
+    const attachments = pendingAttachments;
+    if((!rawText && attachments.length===0) || abortController) return;
+    if(attachments.some(a=>a.loading)) return;
+    let conv = activeConv();
+    if(!conv){ newChat(); conv = activeConv(); }
+
+    const textFiles = attachments.filter(a=>a.type==="text");
+    const imageFiles = attachments.filter(a=>a.type==="image");
+
+    let text = rawText;
+    if(!text && textFiles.length){
+      text = textFiles.length===1
+        ? "Analisis file yang saya lampirkan: ringkas isi utamanya, poin-poin penting, dan hal yang perlu diperhatikan."
+        : "Analisis file-file yang saya lampirkan: ringkas isi masing-masing, poin-poin penting, dan hubungan/perbedaan antar file kalau relevan.";
+    }
+    textFiles.forEach(att=>{
+      const label = att.kind==="pdf" ? `File PDF: ${att.name} (${att.pageInfo||""})` : `File: ${att.name}`;
+      text += `\n\n[${label}]\n\`\`\`\n${att.text}\n\`\`\``;
+    });
+
+    const userMsg = { id: uid(), role:"user", content:"", ts: Date.now() };
+    if(imageFiles.length){
+      userMsg.images = imageFiles.map(a=>({ dataUri:a.dataUri, name:a.name }));
+      if(!text) text = imageFiles.length===1 ? "(lihat gambar terlampir)" : "(lihat gambar-gambar terlampir)";
+    }
+    userMsg.content = text;
+    conv.messages.push(userMsg);
+    pendingAttachments = []; renderAttachmentPreview();
+
+    const isFirstUserMsg = conv.messages.filter(m=>m.role==="user").length===1;
+    if(isFirstUserMsg && (conv.title==="Chat baru" || conv.title==="Grup baru")){
+      conv.title = rawText.slice(0,42) + (rawText.length>42?"…":"") || (imageFiles.length ? "Chat gambar" : "Analisis file");
+    }
+    conv.updatedAt = Date.now();
+    userInput.value = ""; autoResize();
+    saveState(); renderSidebar(); renderMessages();
+
+    if(conv.type==="group"){
+      let targets = conv.members.filter(m=>!m.paused);
+      const mention = text.match(/^@(\S+)\s*/);
+      if(mention){
+        const q = mention[1].toLowerCase();
+        const matched = conv.members.filter(m=>m.name.toLowerCase().startsWith(q));
+        if(matched.length) targets = matched;
+      } else {
+        targets = applyReplyMode(conv, targets);
+      }
+      if(targets.length===0){
+        pushSystemNote(conv, conv.members.length===0
+          ? "Grup ini sudah tidak punya anggota aktif (semua dikeluarkan otomatis). Buka \"Kelola anggota\" untuk menambah lagi."
+          : "Tidak ada anggota yang cocok dengan @mention itu.");
+        saveState(); renderMessages();
+      } else {
+        processGroupRound(conv, targets);
+      }
+    } else if(conv.type==="discussion"){
+      if(debateMembers(conv).length===0){
+        pushSystemNote(conv, "Diskusi ini sudah tidak punya anggota aktif (semua dikeluarkan atau dijeda). Buka \"Kelola diskusi\" untuk menambah/aktifkan lagi.");
+        saveState(); renderMessages();
+      } else {
+        runDiscussion(conv);
+      }
+    } else {
+      runAssistant(conv);
+    }
+  }
+
+  function regenerate(messageId){
+    const conv = activeConv();
+    if(!conv) return;
+    const idx = conv.messages.findIndex(x=>x.id===messageId);
+    if(idx<0) return;
+    const removed = conv.messages[idx];
+    conv.messages = conv.messages.slice(0, idx);
+    saveState(); renderMessages();
+    if(conv.type==="group"){
+      const member = (conv.members||[]).find(m=>m.id===removed.memberId);
+      if(member) processGroupRound(conv, [member]);
+    } else if(conv.type==="discussion"){
+      if(removed.isConclusion){
+        runDiscussionConclusion(conv);
+      } else if(removed.isRoundSummary){
+        runRoundSummary(conv, removed.meta?.round || 1, conv.discussionRounds || 3);
+      } else {
+        const member = (conv.members||[]).find(m=>m.id===removed.memberId);
+        if(member) processGroupRound(conv, [member]);
+      }
+    } else {
+      runAssistant(conv);
+    }
+  }
+
+  /* ============ API CALL (shared streaming helper) ============ */
+  async function streamCompletion(model, messages, onDelta){
+    const s = state.settings;
+    const body = {
+      model: model || "auto",
+      messages,
+      stream: true,
+      temperature: Number(s.temperature),
+      top_p: Number(s.topP),
+      max_tokens: Number(s.maxTokens) || undefined
+    };
+    if(s.strategy && s.strategy!=="auto"){
+      body.omniroute_strategy = s.strategy;
+      body.route = s.strategy;
+    }
+    if(s.compressionEnabled){
+      body.omniroute_compression = { enabled: true, engines: s.compressionEngines };
+    }
+    const headers = { "Content-Type":"application/json" };
+    if(s.apiKey) headers["Authorization"] = "Bearer " + s.apiKey;
+    if(s.strategy && s.strategy!=="auto") headers["X-OmniRoute-Routing-Strategy"] = s.strategy;
+    if(s.compressionEnabled) headers["X-OmniRoute-Compression-Engines"] = s.compressionEngines.join(",");
+
+    abortController = new AbortController();
+    sendBtn.classList.add("stop");
+    sendBtn.title = "Stop";
+    const startTime = performance.now();
+    let fullText = "", usage = null, ok = true, errMsg = "", modelUsed = model;
+
+    try{
+      const resp = await fetch(s.baseUrl.replace(/\/$/,"") + "/chat/completions", {
+        method:"POST", headers, body: JSON.stringify(body), signal: abortController.signal
+      });
+      if(!resp.ok){
+        const t = await resp.text().catch(()=> "");
+        throw new Error(`HTTP ${resp.status} ${resp.statusText} ${t.slice(0,200)}`);
+      }
+      setStatus("online");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buf = "";
+      while(true){
+        const {done, value} = await reader.read();
+        if(done) break;
+        buf += decoder.decode(value, {stream:true});
+        const lines = buf.split("\n");
+        buf = lines.pop();
+        for(const line of lines){
+          const trimmed = line.trim();
+          if(!trimmed.startsWith("data:")) continue;
+          const jsonStr = trimmed.slice(5).trim();
+          if(jsonStr === "[DONE]") continue;
+          try{
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content ?? "";
+            if(delta){ fullText += delta; onDelta(fullText); }
+            if(parsed.usage) usage = parsed.usage;
+            if(parsed.model) modelUsed = parsed.model;
+          }catch(e){ /* skip partial json */ }
+        }
+      }
+    }catch(err){
+      ok = false;
+      errMsg = err.name==="AbortError" ? "Dihentikan pengguna." : err.message;
+      setStatus("offline");
+      if(!fullText){
+        fullText = `⚠️ Gagal terhubung ke OmniRoute: ${errMsg}\n\nPastikan OmniRoute berjalan (\`npx omniroute@latest\`) dan Base URL di Pengaturan sudah benar (default: \`http://localhost:20128/v1\`).`;
+      }
+    }finally{
+      abortController = null;
+      sendBtn.classList.remove("stop");
+      sendBtn.title = "Kirim";
+    }
+
+    let empty = false;
+    if(ok && !fullText.trim()){
+      empty = true;
+      fullText = `_(Model \`${modelUsed}\` tidak mengirim balasan apa pun — biasanya artinya provider di baliknya sedang tidak tersedia/tidak terautentikasi di sisi OmniRoute. Coba model lain atau tekan Ulangi.)_`;
+    }
+
+    return { text: fullText, usage, ok, empty, error: errMsg, model: modelUsed, latency: Math.round(performance.now() - startTime) };
+  }
+
+  async function runAssistant(conv){
+    const s = state.settings;
+    const assistantMsg = { id: uid(), role:"assistant", content:"", ts: Date.now(), meta:{model:s.model} };
+    conv.messages.push(assistantMsg);
+    saveState(); renderMessages();
+    const rowEl = ()=> chatScroll.querySelector(`.msg[data-id="${assistantMsg.id}"] .content`);
+    rowEl().innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+    const payloadMessages = [];
+    if(conv.systemPrompt && conv.systemPrompt.trim()){
+      payloadMessages.push({ role:"system", content: conv.systemPrompt.trim() });
+    }
+    conv.messages.forEach(m=>{
+      if(m.id===assistantMsg.id || m.role==="system-note") return;
+      payloadMessages.push({ role: m.role, content: apiContentFor(m) });
+    });
+
+    const result = await streamCompletion(s.model, payloadMessages, (partial)=>{
+      const el = rowEl();
+      if(el){ el.innerHTML = renderMarkdown(partial) + '<span class="cursor-blink"></span>'; chatScroll.scrollTop = chatScroll.scrollHeight; }
+    });
+
+    assistantMsg.content = result.text;
+    assistantMsg.meta.latency = result.latency;
+    assistantMsg.meta.model = result.model;
+    assistantMsg.meta.tokens = result.usage?.total_tokens ?? Math.ceil(result.text.length/4);
+    conv.updatedAt = Date.now();
+    saveState(); renderMessages();
+
+    logAudit({
+      ts: Date.now(), model: assistantMsg.meta.model, strategy: s.strategy,
+      compression: s.compressionEnabled, latency: result.latency, status: result.ok ? (result.empty ? "empty":"ok") : "error",
+      promptTokens: result.usage?.prompt_tokens ?? null, completionTokens: result.usage?.completion_tokens ?? null,
+      totalTokens: result.usage?.total_tokens ?? null, error: result.ok ? null : result.error
+    });
+    renderDashboard();
+  }
+
+  /* ============ GROUP CHAT ROUND ============ */
+  function apiContentFor(m, textPrefix){
+    const text = (textPrefix||"") + (m.content||"");
+    if(Array.isArray(m.images) && m.images.length){
+      return [
+        { type:"text", text },
+        ...m.images.map(im => ({ type:"image_url", image_url:{ url: im.dataUri } }))
+      ];
+    }
+    return text;
+  }
+  function buildMessagesForMember(conv, member, uptoIndex, extraInstruction){
+    const others = conv.members.filter(mm=>mm.id!==member.id).map(mm=>mm.name);
+    let sys;
+    if(conv.type === "discussion"){
+      sys = `Kamu adalah "${member.name}", salah satu partisipan dalam sebuah diskusi meja bundar/rapat kantor bersama anggota AI lain`
+        + (others.length ? `: ${others.join(", ")}` : "")
+        + `, membahas topik yang diberikan pengguna. Diskusikan secara substantif — boleh setuju, tidak setuju dengan alasan, menambahkan sudut pandang baru, atau menanggapi langsung poin anggota lain — seperti rapat sungguhan, bukan basa-basi kosong. PENTING: jangan mengulang poin yang sudah kamu atau anggota lain sampaikan sebelumnya di diskusi ini — tiap giliranmu harus menambahkan sesuatu yang baru (sudut pandang baru, bantahan/dukungan spesifik ke poin tertentu, data/contoh, atau pertanyaan tajam). Kalau memang sudah tidak ada hal baru untuk ditambahkan, katakan itu singkat dan jelaskan kenapa kamu sepakat/tetap pada posisimu. Jangan mengawali balasanmu dengan menyebut namamu sendiri. Kalau relevan untuk menulis kode/rumus/analisis panjang, jawab selengkapnya tanpa dipotong.`;
+    } else {
+      sys = `Kamu adalah "${member.name}", salah satu partisipan AI dalam sebuah grup chat bersama seorang pengguna manusia`
+        + (others.length ? ` dan anggota AI lain: ${others.join(", ")}` : "")
+        + `. Tanggapi cerita/pesan terbaru dari pengguna dan/atau anggota lain secara natural dan hangat, seperti obrolan grup biasa — singkat untuk obrolan santai, tapi kalau diminta menulis kode, rumus, atau penjelasan panjang/detail, jawab SELENGKAPNYA sampai tuntas tanpa dipotong atau disingkat paksa. Jangan mengawali balasanmu dengan menyebut namamu sendiri, dan jangan mengulang kata-kata anggota lain.`;
+    }
+    if(member.persona && member.persona.trim()) sys += `\n\nPeran/kepribadianmu: ${member.persona.trim()}`;
+    if(conv.systemPrompt && conv.systemPrompt.trim()) sys += `\n\nKonteks/topik: ${conv.systemPrompt.trim()}`;
+    if(extraInstruction) sys += `\n\n${extraInstruction}`;
+    const msgs = [{ role:"system", content: sys }];
+    conv.messages.slice(0, uptoIndex).forEach(m=>{
+      if(m.role==="user"){
+        msgs.push({ role:"user", content: apiContentFor(m, "User: ") });
+      } else if(m.role==="assistant"){
+        if(m.memberId===member.id){ msgs.push({ role:"assistant", content: m.content }); }
+        else {
+          const label = m.isConclusion ? "Kesimpulan diskusi sebelumnya"
+            : m.isRoundSummary ? `Catatan notulen ronde ${m.meta?.round||""}`
+            : (m.memberName || "AI");
+          msgs.push({ role:"user", content: `${label}: ${m.content}` });
+        }
+      }
+    });
+    return msgs;
+  }
+
+  async function processGroupRound(conv, members){
+    let turnIndex = 0;
+    for(const member of members){
+      turnIndex++;
+      if(members.length > 1) showRunStatus(`Giliran ${turnIndex}/${members.length} — ${member.name} · ${members.length-turnIndex} balasan tersisa`);
+      const assistantMsg = {
+        id: uid(), role:"assistant", content:"", ts: Date.now(),
+        memberId: member.id, memberName: member.name, memberColor: member.color,
+        meta:{ model: member.model }
+      };
+      conv.messages.push(assistantMsg);
+      saveState(); renderMessages();
+      const rowEl = ()=> chatScroll.querySelector(`.msg[data-id="${assistantMsg.id}"] .content`);
+      rowEl().innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+      const messages = buildMessagesForMember(conv, member, conv.messages.length - 1);
+      const result = await streamCompletion(member.model, messages, (partial)=>{
+        const el = rowEl();
+        if(el){ el.innerHTML = renderMarkdown(partial) + '<span class="cursor-blink"></span>'; chatScroll.scrollTop = chatScroll.scrollHeight; }
+      });
+
+      assistantMsg.content = result.text;
+      assistantMsg.meta.latency = result.latency;
+      assistantMsg.meta.tokens = result.usage?.total_tokens ?? Math.ceil(result.text.length/4);
+      conv.updatedAt = Date.now();
+      saveState(); renderMessages();
+
+      logAudit({
+        ts: Date.now(), model: member.model, strategy: state.settings.strategy,
+        compression: state.settings.compressionEnabled, latency: result.latency, status: result.ok ? (result.empty ? "empty":"ok") : "error",
+        promptTokens: result.usage?.prompt_tokens ?? null, completionTokens: result.usage?.completion_tokens ?? null,
+        totalTokens: result.usage?.total_tokens ?? null, error: result.ok ? null : result.error
+      });
+      renderDashboard();
+
+      if(!result.ok && result.error==="Dihentikan pengguna."){ break; }
+
+      const wasKicked = result.empty || !result.ok;
+      if(wasKicked){
+        conv.members = conv.members.filter(mm=>mm.id!==member.id);
+        if(!Array.isArray(conv.kickedMembers)) conv.kickedMembers = [];
+        conv.kickedMembers.push(member);
+        pushSystemNote(conv, `⚠ "${member.name}" dikeluarkan otomatis dari grup (${result.empty ? "balasan kosong" : "error: " + result.error}). Anggota lain tetap lanjut. Bisa dipulihkan lewat "Kelola anggota".`);
+        saveState(); renderMessages();
+      }
+    }
+    hideRunStatus();
+  }
+  function pushSystemNote(conv, text){
+    conv.messages.push({ id: uid(), role:"system-note", content:text, ts: Date.now() });
+  }
+  function applyReplyMode(conv, members){
+    const mode = conv.replyMode || "all";
+    if(mode==="all" || members.length<=1) return members;
+    const shuffled = [...members].sort(()=>Math.random()-0.5);
+    if(mode==="random1") return shuffled.slice(0,1);
+    if(mode==="random_some"){
+      const n = Math.min(members.length, 1 + Math.floor(Math.random()*Math.min(3,members.length)));
+      return shuffled.slice(0,n);
+    }
+    return members;
+  }
+
+  /* ============ DISCUSSION MODE ============ */
+  const HINT_DEFAULT_TEXT = "Enter untuk kirim · Shift+Enter baris baru";
+  function showRunStatus(text){
+    const hintLeft = document.querySelector(".hint-row span:first-child");
+    if(hintLeft) hintLeft.textContent = text;
+  }
+  function hideRunStatus(){
+    const hintLeft = document.querySelector(".hint-row span:first-child");
+    if(hintLeft) hintLeft.textContent = HINT_DEFAULT_TEXT;
+  }
+  const ROLE_ORDER = { narasumber:0, penanggap:1, moderator:2 };
+  function orderMembersForRound(members){
+    return [...members].sort((a,b)=> (ROLE_ORDER[a.roleType] ?? 1) - (ROLE_ORDER[b.roleType] ?? 1));
+  }
+  function roleLabel(roleType){
+    return roleType==="narasumber" ? "Narasumber" : roleType==="moderator" ? "Moderator" : null;
+  }
+  function buildRoundExtraInstruction(member, round, rounds){
+    const base = `Ini putaran ke-${round} dari ${rounds} dalam diskusi ini.`;
+    if(member.roleType==="moderator"){
+      if(round===1){
+        return `${base} Kamu bertindak sebagai MODERATOR, bukan peserta debat. Buka diskusi ini: rangkai ulang topik secara singkat dan ajak peserta lain mulai berpendapat. Jangan berikan pendapat pribadimu soal topiknya dulu.`;
+      }
+      return `${base} Kamu bertindak sebagai MODERATOR. Tugasmu: (1) beri catatan singkat arah diskusi sejauh ini, (2) kalau ada yang melenceng dari topik, arahkan kembali, (3) NILAI apakah putaran-putaran terakhir masih menambahkan hal SUBSTANTIF BARU atau sudah mulai berputar-putar mengulang poin yang sama. Kalau menurutmu diskusi sudah berputar-putar dan sebaiknya dihentikan menuju kesimpulan, tulis persis kalimat ini di akhir balasanmu: "DISKUSI SEBAIKNYA DIHENTIKAN" beserta alasan singkatnya. Kalau masih produktif, JANGAN tulis kalimat itu.`;
+    }
+    if(member.roleType==="narasumber"){
+      return `${base} Kamu adalah NARASUMBER — fokus memberi informasi, data, atau penjelasan mendalam terkait topik untuk memandu peserta lain, bukan sekadar opini pribadi.`;
+    }
+    return `${base} ${round===rounds ? "Ini putaran terakhir — kalau relevan, mulai mengarah ke titik temu/kesimpulan." : "Bangun dari apa yang sudah dibahas sebelumnya — jangan mengulang."}`;
+  }
+  async function checkDiscussionCircular(conv, round){
+    const recent = conv.messages.filter(m => m.role==="assistant" && !m.isConclusion && !m.isRoundSummary && m.meta?.round >= Math.max(1, round-1) && m.meta?.round <= round);
+    const transcript = recent.map(m=>`${m.memberName||"AI"}: ${m.content}`).join("\n\n").slice(0, 20000);
+    if(!transcript) return false;
+    const result = await streamCompletion(conv.conclusionModel || "auto", [
+      { role:"system", content:`Kamu menilai apakah dua putaran diskusi terakhir ini menambahkan hal SUBSTANTIF BARU, atau sudah berputar-putar mengulang poin yang sama. Jawab HANYA dengan satu kata: "BARU" atau "BERPUTAR".` },
+      { role:"user", content: transcript }
+    ], ()=>{});
+    return result.ok && /BERPUTAR/i.test(result.text);
+  }
+
+  function debateMembers(conv){
+    return conv.members.filter(m=>!m.paused && m.roleType!=="notulen");
+  }
+  function notulenMember(conv){
+    return conv.members.find(m=>!m.paused && m.roleType==="notulen") || null;
+  }
+  async function runDiscussion(conv){
+    const rounds = conv.discussionRounds || 3;
+    let stoppedEarly = false;
+    for(let round=1; round<=rounds && !stoppedEarly; round++){
+      const activeMembers = orderMembersForRound(debateMembers(conv));
+      if(activeMembers.length===0) break;
+      pushSystemNote(conv, `— Ronde ${round} dari ${rounds} —`);
+      saveState(); renderMessages();
+
+      let turnIndex = 0;
+      for(const member of activeMembers){
+        turnIndex++;
+        if(!conv.members.find(mm=>mm.id===member.id)) continue; // kicked earlier this same round
+        const remaining = activeMembers.length - turnIndex;
+        showRunStatus(`Diskusi: Ronde ${round}/${rounds} · Giliran ${turnIndex}/${activeMembers.length} — ${member.name} · ${remaining} balasan tersisa di ronde ini`);
+
+        const assistantMsg = {
+          id: uid(), role:"assistant", content:"", ts: Date.now(),
+          memberId: member.id, memberName: member.name, memberColor: member.color,
+          roleTag: roleLabel(member.roleType),
+          meta:{ model: member.model, round }
+        };
+        conv.messages.push(assistantMsg);
+        saveState(); renderMessages();
+        const rowEl = ()=> chatScroll.querySelector(`.msg[data-id="${assistantMsg.id}"] .content`);
+        if(rowEl()) rowEl().innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+        const extra = buildRoundExtraInstruction(member, round, rounds);
+        const messages = buildMessagesForMember(conv, member, conv.messages.length - 1, extra);
+        const result = await streamCompletion(member.model, messages, (partial)=>{
+          const el = rowEl();
+          if(el){ el.innerHTML = renderMarkdown(partial) + '<span class="cursor-blink"></span>'; chatScroll.scrollTop = chatScroll.scrollHeight; }
+        });
+
+        assistantMsg.content = result.text;
+        assistantMsg.meta.latency = result.latency;
+        assistantMsg.meta.tokens = result.usage?.total_tokens ?? Math.ceil(result.text.length/4);
+        conv.updatedAt = Date.now();
+        saveState(); renderMessages();
+
+        logAudit({
+          ts: Date.now(), model: member.model, strategy: state.settings.strategy,
+          compression: state.settings.compressionEnabled, latency: result.latency, status: result.ok ? (result.empty ? "empty":"ok") : "error",
+          promptTokens: result.usage?.prompt_tokens ?? null, completionTokens: result.usage?.completion_tokens ?? null,
+          totalTokens: result.usage?.total_tokens ?? null, error: result.ok ? null : result.error
+        });
+        renderDashboard();
+
+        if(!result.ok && result.error==="Dihentikan pengguna."){
+          hideRunStatus();
+          pushSystemNote(conv, "⏹ Diskusi dihentikan pengguna sebelum kesimpulan dibuat.");
+          saveState(); renderMessages();
+          return;
+        }
+        const wasKicked = result.empty || !result.ok;
+        if(wasKicked){
+          conv.members = conv.members.filter(mm=>mm.id!==member.id);
+          if(!Array.isArray(conv.kickedMembers)) conv.kickedMembers = [];
+          conv.kickedMembers.push(member);
+          pushSystemNote(conv, `⚠ "${member.name}" dikeluarkan otomatis dari diskusi (${result.empty ? "balasan kosong" : "error: " + result.error}). Diskusi lanjut tanpa dia.`);
+          saveState(); renderMessages();
+        } else if(member.roleType==="moderator" && round>1 && /DISKUSI SEBAIKNYA DIHENTIKAN/i.test(result.text)){
+          pushSystemNote(conv, `🧑‍⚖️ Moderator menilai diskusi sudah berputar-putar dan menutupnya lebih awal di ronde ${round}, lanjut ke kesimpulan.`);
+          saveState(); renderMessages();
+          stoppedEarly = true;
+          break;
+        }
+      }
+      hideRunStatus();
+      if(stoppedEarly) break;
+
+      if(conv.summarizeRounds && round < rounds && debateMembers(conv).length > 0){
+        await runRoundSummary(conv, round, rounds);
+      }
+
+      const hasModerator = conv.members.some(m=>!m.paused && m.roleType==="moderator");
+      if(!hasModerator && round>=2 && round<rounds && debateMembers(conv).length>0){
+        showRunStatus("Menilai apakah diskusi masih produktif...");
+        const circular = await checkDiscussionCircular(conv, round);
+        hideRunStatus();
+        if(circular){
+          pushSystemNote(conv, `🧑‍⚖️ Diskusi terdeteksi berputar-putar mengulang poin yang sama di ronde ${round} — dihentikan lebih awal, lanjut ke kesimpulan.`);
+          saveState(); renderMessages();
+          stoppedEarly = true;
+        }
+      }
+    }
+    if(conv.members.length > 0){
+      await runDiscussionConclusion(conv);
+    } else {
+      pushSystemNote(conv, "Semua anggota keluar sebelum diskusi selesai — kesimpulan tidak dibuat.");
+      saveState(); renderMessages();
+    }
+  }
+
+  async function runRoundSummary(conv, round, rounds){
+    const roundMessages = conv.messages.filter(m => m.role==="assistant" && !m.isConclusion && !m.isRoundSummary && m.meta?.round===round);
+    if(roundMessages.length===0) return;
+    const transcript = roundMessages.map(m=>`${m.memberName||"AI"}: ${m.content}`).join("\n\n").slice(0, 20000);
+    const notulen = notulenMember(conv);
+    const modelToUse = notulen ? notulen.model : (conv.conclusionModel || "auto");
+    const sys = `Kamu notulen rapat. Ringkas SANGAT SINGKAT (2-4 kalimat) benang merah putaran diskusi ini saja — bukan seluruh diskusi. Fokus ke: apa yang baru dibahas, dan ke mana arah diskusi berikutnya.`;
+    const summaryMsg = { id: uid(), role:"assistant", content:"", ts: Date.now(), isRoundSummary:true, memberId: notulen ? notulen.id : undefined, notulenName: notulen ? notulen.name : null, meta:{ model: modelToUse, round } };
+    conv.messages.push(summaryMsg);
+    saveState(); renderMessages();
+    showRunStatus(`Notulen sedang merangkum ronde ${round}...`);
+    const rowEl = ()=> chatScroll.querySelector(`.msg[data-id="${summaryMsg.id}"] .content`);
+    if(rowEl()) rowEl().innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+    const result = await streamCompletion(modelToUse, [
+      { role:"system", content: sys },
+      { role:"user", content: transcript }
+    ], (partial)=>{
+      const el = rowEl();
+      if(el){ el.innerHTML = renderMarkdown(partial) + '<span class="cursor-blink"></span>'; chatScroll.scrollTop = chatScroll.scrollHeight; }
+    });
+    summaryMsg.content = result.text;
+    summaryMsg.meta.latency = result.latency;
+    conv.updatedAt = Date.now();
+    hideRunStatus();
+    saveState(); renderMessages();
+  }
+
+  async function runDiscussionConclusion(conv){
+    pushSystemNote(conv, "📋 Menyusun kesimpulan diskusi...");
+    saveState(); renderMessages();
+    showRunStatus("Menyusun kesimpulan diskusi... (bisa agak lama untuk model reasoning berat)");
+
+    const transcript = conv.messages
+      .filter(m => m.role==="user" || (m.role==="assistant" && !m.isConclusion && !m.isRoundSummary))
+      .map(m => m.role==="user" ? `User: ${m.content}` : `${m.memberName || "AI"}: ${m.content}`)
+      .join("\n\n")
+      .slice(0, 60000);
+
+    const voteInstruction = conv.requestVotes
+      ? ` (5) Posisi tiap anggota: untuk tiap nama peserta, simpulkan posisinya (Setuju / Tidak Setuju / Netral-Campuran) beserta alasan singkat berdasarkan apa yang mereka sampaikan.`
+      : "";
+    const notulen = notulenMember(conv);
+    const modelToUse = notulen ? notulen.model : (conv.conclusionModel || "auto");
+    const sys = `Kamu adalah moderator/notulen rapat. Berikut transkrip diskusi meja bundar antar beberapa AI tentang sebuah topik. Buatkan KESIMPULAN dalam Bahasa Indonesia dengan format: (1) Ringkasan topik, (2) Poin-poin utama yang dibahas, (3) Area yang disepakati vs yang masih diperdebatkan (kalau ada), (4) Rekomendasi/langkah lanjut kalau relevan.${voteInstruction} Ringkas tapi lengkap, pakai heading/list markdown.`;
+    const messages = [
+      { role:"system", content: sys },
+      { role:"user", content: transcript }
+    ];
+
+    const conclusionMsg = { id: uid(), role:"assistant", content:"", ts: Date.now(), isConclusion:true, memberId: notulen ? notulen.id : undefined, notulenName: notulen ? notulen.name : null, meta:{ model: modelToUse } };
+    conv.messages.push(conclusionMsg);
+    saveState(); renderMessages();
+    const rowEl = ()=> chatScroll.querySelector(`.msg[data-id="${conclusionMsg.id}"] .content`);
+    if(rowEl()) rowEl().innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span>';
+
+    const result = await streamCompletion(modelToUse, messages, (partial)=>{
+      const el = rowEl();
+      if(el){ el.innerHTML = renderMarkdown(partial) + '<span class="cursor-blink"></span>'; chatScroll.scrollTop = chatScroll.scrollHeight; }
+    });
+
+    conclusionMsg.content = result.text;
+    conclusionMsg.meta.latency = result.latency;
+    conclusionMsg.meta.tokens = result.usage?.total_tokens ?? Math.ceil(result.text.length/4);
+    conv.updatedAt = Date.now();
+    hideRunStatus();
+    saveState(); renderMessages();
+
+    logAudit({
+      ts: Date.now(), model: modelToUse, strategy: state.settings.strategy,
+      compression: state.settings.compressionEnabled, latency: result.latency, status: result.ok ? (result.empty ? "empty":"ok") : "error",
+      promptTokens: result.usage?.prompt_tokens ?? null, completionTokens: result.usage?.completion_tokens ?? null,
+      totalTokens: result.usage?.total_tokens ?? null, error: result.ok ? null : result.error
+    });
+    renderDashboard();
+  }
+
+  /* ============ STATUS / MODELS ============ */
+  function setStatus(kind){
+    statusDot.className = "status-dot " + kind;
+    statusText.textContent = kind==="online" ? "Tersambung" : kind==="offline" ? "Terputus" : "Memeriksa...";
+  }
+  async function pingAndFetchModels(){
+    setStatus("pending");
+    try{
+      const resp = await fetch(state.settings.baseUrl.replace(/\/$/,"") + "/models", {
+        headers: state.settings.apiKey ? {Authorization:"Bearer "+state.settings.apiKey} : {}
+      });
+      if(!resp.ok) throw new Error("HTTP "+resp.status);
+      const data = await resp.json();
+      modelsCache = data.data || data.models || [];
+      setStatus("online");
+      populateModelSelect();
+      renderModelList();
+    }catch(e){
+      setStatus("offline");
+      populateModelSelect();
+    }
+  }
+  function populateModelSelect(){
+    modelSelect.innerHTML = "";
+    const optAuto = document.createElement("option");
+    optAuto.value = "auto"; optAuto.textContent = "Model: Auto (OmniRoute memilih)";
+    modelSelect.appendChild(optAuto);
+    modelsCache.forEach(m=>{
+      const opt = document.createElement("option");
+      opt.value = m.id; opt.textContent = m.id;
+      modelSelect.appendChild(opt);
+    });
+    modelSelect.value = state.settings.model && [...modelSelect.options].some(o=>o.value===state.settings.model)
+      ? state.settings.model : "auto";
+  }
+  modelSelect.addEventListener("change", ()=>{
+    state.settings.model = modelSelect.value; saveState();
+  });
+  strategySelect.addEventListener("change", ()=>{
+    state.settings.strategy = strategySelect.value; saveState();
+  });
+  compressionChip.addEventListener("click", ()=>{
+    state.settings.compressionEnabled = !state.settings.compressionEnabled;
+    saveState(); syncTopbar();
+  });
+  $("pingBtn").addEventListener("click", pingAndFetchModels);
+
+  function syncTopbar(){
+    strategySelect.value = state.settings.strategy;
+    compressionChip.textContent = "Kompresi: " + (state.settings.compressionEnabled ? "aktif":"mati");
+    compressionChip.classList.toggle("on", state.settings.compressionEnabled);
+    tempChip.textContent = "Temp: " + state.settings.temperature;
+  }
+
+  /* ============ DASHBOARD ============ */
+  document.querySelectorAll(".dash-tab").forEach(tab=>{
+    tab.addEventListener("click", ()=>{
+      document.querySelectorAll(".dash-tab").forEach(t=>t.classList.remove("active"));
+      document.querySelectorAll(".dash-pane").forEach(p=>p.classList.remove("active"));
+      tab.classList.add("active");
+      $(tab.dataset.pane).classList.add("active");
+    });
+  });
+  $("dashboardToggleBtn").addEventListener("click", ()=>{
+    dashboard.classList.add("open"); renderDashboard();
+  });
+  $("dashCloseBtn").addEventListener("click", ()=> dashboard.classList.remove("open"));
+
+  function renderDashboard(){
+    const log = state.auditLog;
+    $("statRequests").textContent = log.length;
+    const pt = log.reduce((a,r)=>a+(r.promptTokens||0),0);
+    const ct = log.reduce((a,r)=>a+(r.completionTokens||0),0);
+    $("statTokens").textContent = `${pt} / ${ct}`;
+    const compressedRuns = log.filter(r=>r.compression);
+    const savedPct = compressedRuns.length ? Math.round((compressedRuns.length/log.length)*100) : 0;
+    $("statSaved").textContent = savedPct + "% permintaan pakai kompresi";
+    $("statSavedBar").style.width = savedPct + "%";
+    const avgLat = log.length ? Math.round(log.reduce((a,r)=>a+(r.latency||0),0)/log.length) : 0;
+    $("statLatency").textContent = avgLat + " ms";
+
+    const auditList = $("auditList");
+    if(log.length===0){
+      auditList.innerHTML = '<div class="empty-note">Belum ada permintaan tercatat</div>';
+    } else {
+      auditList.innerHTML = log.slice().reverse().slice(0,50).map(r=>`
+        <div class="audit-row ${r.status==='error'?'status-error':''}">
+          <div class="top"><span>${escapeHtml(r.model||'?')}</span><span>${r.status==='ok'?'OK':r.status==='empty'?'KOSONG':'ERROR'}</span></div>
+          <div class="bottom">${new Date(r.ts).toLocaleTimeString()} · strategi: ${r.strategy} · ${r.latency}ms ${r.totalTokens?('· '+r.totalTokens+' tok'):''}</div>
+        </div>`).join("");
+    }
+  }
+  function logAudit(entry){
+    state.auditLog.push(entry);
+    if(state.auditLog.length>500) state.auditLog = state.auditLog.slice(-500);
+    saveState();
+  }
+  function renderModelList(){
+    const list = $("modelList");
+    const q = ($("modelSearch").value||"").toLowerCase();
+    const items = modelsCache.filter(m=>!q || m.id.toLowerCase().includes(q));
+    if(items.length===0){ list.innerHTML = '<div class="empty-note">Tidak ada model (cek koneksi OmniRoute)</div>'; return; }
+    list.innerHTML = items.map(m=>`
+      <div class="model-item ${m.id===state.settings.model?'active':''}" data-id="${escapeHtml(m.id)}">
+        <div class="mid">${escapeHtml(m.id)} ${isFreeModel(m) ? '<span class="chip on" style="padding:1px 6px;font-size:.6rem;">GRATIS</span>' : ""}</div>
+        <div class="mowner">${escapeHtml(m.owned_by||m.provider||'')}</div>
+      </div>`).join("");
+    list.querySelectorAll(".model-item").forEach(el=>{
+      el.addEventListener("click", ()=>{
+        state.settings.model = el.dataset.id; saveState();
+        modelSelect.value = [...modelSelect.options].some(o=>o.value===el.dataset.id) ? el.dataset.id : "auto";
+        renderModelList();
+      });
+    });
+  }
+  $("modelSearch") && $("modelSearch").addEventListener("input", renderModelList);
+
+  /* ============ PROVIDER DIAGNOSTICS ============ */
+  function originFromBaseUrl(){
+    try{ return new URL(state.settings.baseUrl).origin; }catch(e){ return state.settings.baseUrl.replace(/\/v1\/?$/,""); }
+  }
+  function diagnoseFailureReason(reason){
+    const r = (reason||"").toLowerCase();
+    if(/rate.?limit|429/.test(r)) return "Ini biasanya cuma pembatasan sementara (rate limit) — coba lagi beberapa menit lagi, tidak perlu setup tambahan.";
+    if(/auggie|cli exited|not recognized|command/.test(r)) return "Provider ini butuh CLI/tool tambahan ter-install &amp; login di komputer yang menjalankan OmniRoute (bukan di aplikasi chat ini).";
+    if(/forbidden|403|401|invalid_api_key|authentication|unauthorized/.test(r)) return "Provider ini butuh API key/login yang belum dikonfigurasi di OmniRoute — buka Dashboard OmniRoute di bawah untuk menghubungkannya.";
+    if(/exhausted|quota|insufficient/.test(r)) return "Kuota/akun gratis provider ini sedang habis — coba lagi nanti atau tambah akun di OmniRoute.";
+    if(/timeout|abort/.test(r)) return "Provider ini lambat merespons/timeout — bisa jadi sedang sibuk, coba lagi nanti.";
+    if(/retry limit|combo/.test(r)) return "Ini alias gabungan (combo) yang mencoba beberapa provider di baliknya dan semuanya gagal — cek provider individualnya di bawah.";
+    return "Biasanya ini butuh API key/login/setup tambahan di sisi OmniRoute (bukan di aplikasi chat ini) — buka Dashboard OmniRoute di bawah untuk menghubungkannya.";
+  }
+  function groupModelsByOwner(){
+    const groups = {};
+    modelsCache.filter(isChatModel).forEach(m=>{
+      const owner = m.owned_by || "?";
+      (groups[owner] = groups[owner] || []).push(m);
+    });
+    return groups;
+  }
+  async function runProviderDiagnostics(){
+    const btn = $("testProvidersBtn");
+    const resultEl = $("providerDiagResult");
+    if(modelsCache.length===0){ resultEl.innerHTML = '<div class="empty-note">Belum ada daftar model — cek koneksi OmniRoute dulu.</div>'; return; }
+    btn.disabled = true; btn.textContent = "Menguji provider...";
+    const groups = groupModelsByOwner();
+    const owners = Object.keys(groups);
+    const reps = owners.map(o => groups[o][0]);
+    resultEl.innerHTML = `<div class="empty-note">Menguji ${owners.length} provider (1 model contoh tiap provider, biar hemat)...</div>`;
+    const results = await testModelsWithLimit(reps.map(m=>m.id), 4, ()=>{});
+    resultEl.innerHTML = owners.map((o, i)=>{
+      const rep = reps[i];
+      const r = results[rep.id];
+      const count = groups[o].length;
+      return `<div class="stat-card">
+        <div class="label">${escapeHtml(o)} — ${count} model</div>
+        <div class="value" style="font-size:.9rem;color:${r.ok ? '#22c55e' : 'var(--danger)'};">${r.ok ? '🟢 Terhubung' : '🔴 Bermasalah'}</div>
+        ${r.ok ? "" : `<div class="small-note">Contoh error dari <code>${escapeHtml(rep.id)}</code>: ${escapeHtml(r.reason)}<br>${diagnoseFailureReason(r.reason)}</div>`}
+      </div>`;
+    }).join("");
+    btn.disabled = false; btn.textContent = "🩺 Tes semua provider (cek yang butuh API key/login)";
+  }
+  $("testProvidersBtn").addEventListener("click", runProviderDiagnostics);
+  $("openDashboardFromProviderBtn").addEventListener("click", ()=>{
+    window.open(originFromBaseUrl() + "/", "_blank", "noopener,noreferrer");
+  });
+  async function checkQuota(){
+    const resultEl = $("quotaResult");
+    const token = state.settings.managementToken;
+    if(!token){
+      resultEl.innerHTML = '<div class="info-block">Belum ada token manajemen. Isi di Pengaturan (bukan API key /v1 biasa — ini token admin/manajemen khusus dashboard OmniRoute), lalu coba lagi.</div>';
+      return;
+    }
+    resultEl.innerHTML = '<div class="empty-note">Memeriksa...</div>';
+    const origin = originFromBaseUrl();
+    const paths = ["/api/usage", "/api/stats", "/api/quota", "/api/budget"];
+    for(const p of paths){
+      try{
+        const resp = await fetch(origin + p, { headers:{ Authorization: "Bearer " + token } });
+        if(!resp.ok) continue;
+        const data = await resp.json();
+        resultEl.innerHTML = `<div class="stat-card"><div class="label">${escapeHtml(p)}</div><pre style="white-space:pre-wrap;font-size:.72rem;margin-top:6px;">${escapeHtml(JSON.stringify(data, null, 2)).slice(0,2000)}</pre></div>`;
+        return;
+      }catch(e){ /* try next */ }
+    }
+    resultEl.innerHTML = '<div class="info-block">Tidak bisa mengambil data kuota (token salah, endpoint berbeda di versi OmniRoute Anda, atau butuh login lewat dashboard-nya langsung). Coba tombol "Buka Dashboard OmniRoute" di bawah.</div>';
+  }
+  $("checkQuotaBtn").addEventListener("click", checkQuota);
+  $("openDashboardBtn").addEventListener("click", ()=>{
+    window.open(originFromBaseUrl() + "/", "_blank", "noopener,noreferrer");
+  });
+
+  /* ============ SETTINGS MODAL ============ */
+  function openSettings(){
+    const s = state.settings;
+    $("baseUrlInput").value = s.baseUrl;
+    $("apiKeyInput").value = s.apiKey;
+    $("managementTokenInput").value = s.managementToken || "";
+    $("tempInput").value = s.temperature;
+    $("topPInput").value = s.topP;
+    $("maxTokensInput").value = s.maxTokens;
+    $("compressionEnabledInput").checked = s.compressionEnabled;
+    document.querySelectorAll(".engine-cb").forEach(cb=>{
+      cb.checked = s.compressionEngines.includes(cb.value);
+    });
+    $("settingsOverlay").classList.remove("hidden");
+  }
+  $("settingsBtn").addEventListener("click", openSettings);
+  $("closeSettingsBtn").addEventListener("click", ()=>$("settingsOverlay").classList.add("hidden"));
+  $("cancelSettingsBtn").addEventListener("click", ()=>$("settingsOverlay").classList.add("hidden"));
+  $("saveSettingsBtn").addEventListener("click", ()=>{
+    const s = state.settings;
+    s.baseUrl = $("baseUrlInput").value.trim() || defaultSettings.baseUrl;
+    s.apiKey = $("apiKeyInput").value.trim();
+    s.managementToken = $("managementTokenInput").value.trim();
+    s.temperature = parseFloat($("tempInput").value) || 0;
+    s.topP = parseFloat($("topPInput").value) || 1;
+    s.maxTokens = parseInt($("maxTokensInput").value) || 2048;
+    s.compressionEnabled = $("compressionEnabledInput").checked;
+    s.compressionEngines = [...document.querySelectorAll(".engine-cb")].filter(cb=>cb.checked).map(cb=>cb.value);
+    saveState(); syncTopbar();
+    $("settingsOverlay").classList.add("hidden");
+    pingAndFetchModels();
+  });
+  $("exportAllBtn").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "omniroute-studio-export.json"; a.click();
+  });
+  $("importAllBtn").addEventListener("click", ()=> $("importFileInput").click());
+  $("importFileInput").addEventListener("change", (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const imported = JSON.parse(reader.result);
+        if(imported.conversations){
+          state.conversations = imported.conversations.concat(state.conversations);
+          state.settings = Object.assign({}, defaultSettings, imported.settings||{}, state.settings);
+          saveState(); renderSidebar(); applyTheme(); syncTopbar();
+          alert("Impor berhasil.");
+        }
+      }catch(err){ alert("File tidak valid: "+err.message); }
+    };
+    reader.readAsText(file);
+  });
+  $("clearAllBtn").addEventListener("click", ()=>{
+    if(!confirm("Hapus SEMUA percakapan, pengaturan, dan log lokal? Tindakan ini tidak bisa dibatalkan.")) return;
+    localStorage.removeItem(STORE_KEY);
+    state = loadState();
+    applyTheme(); syncTopbar(); renderSidebar(); renderMessages(); renderDashboard();
+    $("settingsOverlay").classList.add("hidden");
+  });
+
+  /* ============ SYSTEM PROMPT MODAL ============ */
+  $("sysPromptBtn").addEventListener("click", ()=>{
+    let conv = activeConv();
+    if(!conv){ newChat(); conv = activeConv(); }
+    if(conv.type==="group" || conv.type==="discussion"){ openGroupModal(conv); return; }
+    $("sysPromptInput").value = conv.systemPrompt || "";
+    $("sysPromptOverlay").classList.remove("hidden");
+  });
+  $("closeSysPromptBtn").addEventListener("click", ()=>$("sysPromptOverlay").classList.add("hidden"));
+  $("cancelSysPromptBtn").addEventListener("click", ()=>$("sysPromptOverlay").classList.add("hidden"));
+  $("saveSysPromptBtn").addEventListener("click", ()=>{
+    const conv = activeConv();
+    if(conv){ conv.systemPrompt = $("sysPromptInput").value; saveState(); }
+    $("sysPromptOverlay").classList.add("hidden");
+  });
+
+  /* ============ GROUP CHAT MODAL ============ */
+  const FREE_OWNERS = ["duckduckgo-web", "veoaifree-web"];
+  function isFreeModel(m){
+    return /free/i.test(m.id) || FREE_OWNERS.includes(m.owned_by);
+  }
+  function isChatModel(m){
+    if(m.type==="video" || m.type==="image" || m.type==="audio") return false;
+    if(/\b(veo|seedance)\b/i.test(m.id) || /\b(veo|seedance)\b/i.test(m.name||"")) return false;
+    return true;
+  }
+  function modelDisplayName(m){
+    if(!m) return "";
+    if(m.name) return m.name.replace(/^[^/]+\//, "");
+    return m.id.includes("/") ? m.id.split("/").pop() : m.id;
+  }
+  function uniqueByName(models){
+    const seen = new Set();
+    const result = [];
+    for(const m of models){
+      const key = modelDisplayName(m).trim().toLowerCase();
+      if(!key || seen.has(key)){ continue; }
+      seen.add(key);
+      result.push(m);
+    }
+    return result;
+  }
+  function defaultMemberPool(){
+    const concrete = modelsCache.filter(m=>isChatModel(m) && !m.id.startsWith("auto/"));
+    return concrete.length ? concrete : modelsCache;
+  }
+
+  /* ============ MODEL CONNECTIVITY TEST ============ */
+  async function testModelConnectivityRaw(modelId, timeoutMs){
+    const s = state.settings;
+    const controller = new AbortController();
+    const timer = setTimeout(()=> controller.abort(), timeoutMs || 35000);
+    const headers = { "Content-Type":"application/json" };
+    if(s.apiKey) headers["Authorization"] = "Bearer " + s.apiKey;
+    const startTime = performance.now();
+    try{
+      const resp = await fetch(s.baseUrl.replace(/\/$/,"") + "/chat/completions", {
+        method:"POST", headers, signal: controller.signal,
+        body: JSON.stringify({
+          model: modelId, stream: false, max_tokens: 200,
+          messages: [{ role:"user", content:"Balas dengan satu kata saja: ok" }]
+        })
+      });
+      clearTimeout(timer);
+      const latency = Math.round(performance.now() - startTime);
+      if(!resp.ok){
+        const t = await resp.text().catch(()=> "");
+        let msg = "HTTP " + resp.status;
+        try{ msg = JSON.parse(t).error?.message || msg; }catch(e){}
+        return { ok:false, reason: msg.slice(0,120), latency };
+      }
+      const data = await resp.json();
+      const content = data.choices?.[0]?.message?.content || "";
+      if(!content.trim()) return { ok:false, reason:"Balasan kosong", latency };
+      return { ok:true, reason:"", latency };
+    }catch(err){
+      clearTimeout(timer);
+      return { ok:false, reason: err.name==="AbortError" ? "Timeout" : err.message, latency: Math.round(performance.now()-startTime) };
+    }
+  }
+  const NON_RETRYABLE_RE = /HTTP 401|HTTP 403|invalid_api_key|unauthorized|not supported|not recognized/i;
+  async function testModelConnectivity(modelId, timeoutMs){
+    let result = await testModelConnectivityRaw(modelId, timeoutMs);
+    if(!result.ok && !NON_RETRYABLE_RE.test(result.reason||"")){
+      await new Promise(r=>setTimeout(r, 500)); // brief pause — also avoids hammering right after a failure
+      const retry = await testModelConnectivityRaw(modelId, timeoutMs);
+      if(retry.ok) return retry;
+      // keep the more informative of the two failure reasons if they differ
+      return retry;
+    }
+    return result;
+  }
+  async function testModelsWithLimit(modelIds, concurrency, onEach, timeoutMs){
+    const results = {};
+    const uniqueIds = [...new Set(modelIds)];
+    let cursor = 0;
+    async function worker(){
+      while(cursor < uniqueIds.length){
+        const id = uniqueIds[cursor++];
+        const r = await testModelConnectivity(id, timeoutMs);
+        results[id] = r;
+        if(onEach) onEach(id, r);
+      }
+    }
+    const workers = Array.from({ length: Math.min(concurrency, uniqueIds.length) }, worker);
+    await Promise.all(workers);
+    return results;
+  }
+  function rankModelsForTeam(passed){
+    return passed.slice().sort((a,b)=>{
+      const ra = a.capabilities?.reasoning ? 1 : 0;
+      const rb = b.capabilities?.reasoning ? 1 : 0;
+      if(rb !== ra) return rb - ra; // model reasoning diprioritaskan
+      const ca = a.context_length || 0, cb = b.context_length || 0;
+      if(cb !== ca) return cb - ca; // konteks lebih besar diprioritaskan
+      return (a.__testLatency ?? Infinity) - (b.__testLatency ?? Infinity); // lebih cepat diprioritaskan
+    });
+  }
+
+  async function autoSelectBestModels(targetCount, onProgress){
+    // 1) Dedup dulu berdasarkan nama tampilan — banyak model yang "beda ID" itu sebenarnya
+    // model yang sama lewat jalur/provider berbeda (mis. cw/claude-sonnet-4-6 vs
+    // claude-web/claude-sonnet-4-6 vs no-think/... varian) — tidak perlu diuji berkali-kali.
+    // Alias "auto/best-*" (owner "combo") dilewati dari pool utama karena redundan dengan
+    // "auto" biasa dan sudah terbukti lebih sering gagal di sesi-sesi sebelumnya.
+    const BULK_TEST_TIMEOUT = 18000; // lebih pendek dari default 35s biar tidak makan waktu terlalu lama pas nguji banyak model sekaligus
+    const rawCandidates = modelsCache.filter(isChatModel);
+    const dedupedReal = uniqueByName(rawCandidates.filter(m=>m.owned_by!=="combo"));
+    if(dedupedReal.length===0 && onProgress) onProgress("Menganalisis auto...");
+    if(onProgress) onProgress(`${rawCandidates.length} model → ${dedupedReal.length} nama unik setelah deduplikasi...`);
+
+    const groups = {};
+    dedupedReal.forEach(m=>{ (groups[m.owned_by||"?"] = groups[m.owned_by||"?"] || []).push(m); });
+    const owners = Object.keys(groups);
+
+    if(onProgress) onProgress("Menguji provider yang tersedia...");
+    const reps = owners.map(o=>groups[o][0]);
+    const repResults = owners.length ? await testModelsWithLimit(reps.map(m=>m.id), 6, ()=>{}, BULK_TEST_TIMEOUT) : {};
+    // Provider yang wakilnya gagal tetap dapat giliran (bukan langsung dicoret total),
+    // cuma diprioritaskan belakangan.
+    const aliveOwners = owners.filter((o,i)=>repResults[reps[i].id]?.ok);
+    const otherOwners = owners.filter((o,i)=>!repResults[reps[i].id]?.ok);
+    const orderedOwners = [...aliveOwners, ...otherOwners];
+
+    const remainingByOwner = {};
+    orderedOwners.forEach(o => remainingByOwner[o] = groups[o].slice());
+
+    const passed = [];
+    // "auto" (router bawaan OmniRoute) selalu ikut dianalisis duluan, terpisah dari pool provider.
+    if(onProgress) onProgress("Menganalisis auto...");
+    const autoResult = await testModelConnectivity("auto", BULK_TEST_TIMEOUT);
+    if(autoResult.ok){
+      passed.push({ id:"auto", owned_by:"combo", name:"Auto (OmniRoute)", __testLatency: autoResult.latency });
+    }
+
+    // Karena sudah dideduplikasi, batas percobaan bisa lebih longgar — kita coba SEBANYAK MUNGKIN
+    // nama unik yang tersedia (bukan berhenti begitu ketemu N), supaya hasil akhirnya benar-benar
+    // "yang terbaik dari yang teruji", bukan "yang pertama ketemu".
+    const availableTotal = orderedOwners.reduce((sum,o)=>sum+(remainingByOwner[o]?.length||0), 0);
+    const maxAttempts = Math.min(availableTotal, Math.max(targetCount*10, 60));
+
+    let ownerCursor = 0, attempted = 0;
+    while(attempted < maxAttempts){
+      let owner = null;
+      for(let tries=0; tries<orderedOwners.length; tries++){
+        const candidateOwner = orderedOwners[ownerCursor % orderedOwners.length];
+        ownerCursor++;
+        if(remainingByOwner[candidateOwner] && remainingByOwner[candidateOwner].length>0){ owner = candidateOwner; break; }
+      }
+      if(!owner) break; // benar-benar habis
+      const candidate = remainingByOwner[owner].shift();
+      attempted++;
+      if(onProgress) onProgress(`Menganalisis ${candidate.id}... (${passed.length} lolos, ${attempted}/${maxAttempts} dianalisis)`);
+      await new Promise(r=>setTimeout(r, 200)); // jeda kecil biar tidak memicu rate-limit sendiri
+      const r = await testModelConnectivity(candidate.id, BULK_TEST_TIMEOUT);
+      if(r.ok){ candidate.__testLatency = r.latency; passed.push(candidate); }
+    }
+
+    const ranked = rankModelsForTeam(passed);
+    return ranked.slice(0, targetCount); // kalau yang lolos < target, ambil semua yang ada (yang terbaik)
+  }
+
+  function autoAssignRoles(picks){
+    const assignments = new Map(); // model id -> roleType
+    if(picks.length < 2) return assignments;
+
+    const pool = [...picks];
+    const withReasoning = pool.filter(p => p.capabilities?.reasoning === true);
+    const narasumberPick = (withReasoning.length ? withReasoning : pool)
+      .slice().sort((a,b)=>(b.context_length||0)-(a.context_length||0))[0];
+    assignments.set(narasumberPick.id, "narasumber");
+
+    if(picks.length >= 3){
+      const afterNarasumber = pool.filter(p=>p.id!==narasumberPick.id);
+      const moderatorPick = afterNarasumber.slice()
+        .sort((a,b)=>(a.__testLatency ?? Infinity)-(b.__testLatency ?? Infinity))[0];
+      assignments.set(moderatorPick.id, "moderator");
+
+      if(picks.length >= 4){
+        const afterModerator = afterNarasumber.filter(p=>p.id!==moderatorPick.id);
+        const notulenPick = afterModerator.slice()
+          .sort((a,b)=>(b.context_length||0)-(a.context_length||0))[0];
+        assignments.set(notulenPick.id, "notulen");
+      }
+    }
+    return assignments; // anything not in the map stays default "penanggap"
+  }
+
+  $("autoPickTeamBtn").addEventListener("click", async ()=>{
+    if(groupModalMembers.length > 0 && !confirm("Ganti anggota yang ada sekarang dengan hasil analisis? Model dengan nama sama akan digabung dulu, lalu SEMUA nama unik yang tersisa dianalisis (bukan berhenti begitu ketemu N), baru diambil yang terbaik sejumlah target — bisa makan waktu beberapa menit.")) return;
+    const btn = $("autoPickTeamBtn");
+    const targetCount = Math.max(2, Math.min(8, parseInt($("autoTeamSizeInput").value) || 4));
+    btn.disabled = true; btn.textContent = "Menganalisis...";
+    const picks = await autoSelectBestModels(targetCount, (msg)=>{ btn.textContent = msg; });
+    btn.disabled = false; btn.textContent = "🎯 Auto-pilih model terbaik";
+    if(picks.length===0){ alert("Tidak ada model yang bisa dihubungi sekarang. Cek koneksi OmniRoute-mu."); return; }
+
+    const templateKey = $("teamTemplateSelect").value;
+    const template = TEAM_TEMPLATES[templateKey];
+    const roleAssignments = groupModalMode==="discussion" ? autoAssignRoles(picks) : new Map();
+    groupModalMembers = picks.map((m, i)=>{
+      const roleType = roleAssignments.get(m.id) || "penanggap";
+      const isNotulen = roleType==="notulen";
+      const role = (!isNotulen && template) ? ROLE_TEMPLATES.find(r=>r.name===template.roles[i % template.roles.length]) : null;
+      return {
+        id: uid(),
+        name: isNotulen ? "Notulen" : (role ? role.name : modelDisplayName(m)),
+        autoName: !role && !isNotulen,
+        model: m.id,
+        persona: isNotulen ? "Mencatat jalannya diskusi secara netral dan merangkumnya." : (role ? role.persona : ""),
+        roleType: groupModalMode==="discussion" ? roleType : undefined,
+        color: MEMBER_PALETTE[i % MEMBER_PALETTE.length]
+      };
+    });
+    renderGroupMembersUI();
+    if(picks.length < targetCount){
+      alert(`Sudah dianalisis banyak model unik dari berbagai provider, tapi cuma ${picks.length} dari target ${targetCount} yang benar-benar terhubung sekarang — jadi diambil yang ${picks.length} terbaik dari yang ada (bukan berhenti di percobaan pertama). Provider lain kemungkinan sedang bermasalah/butuh setup tambahan — cek tab "Provider" di Dashboard buat lihat rinciannya. Tetap bisa dipakai, atau coba lagi nanti.`);
+    } else if(picks.length > 0){
+      alert(`${picks.length} model terbaik terpilih dari hasil analisis (diurutkan berdasarkan kemampuan reasoning, ukuran konteks, dan kecepatan respons).`);
+    }
+  });
+
+  function makeBlankMember(index){
+    const pool = defaultMemberPool();
+    const preferred = pool[index % Math.max(pool.length,1)];
+    return {
+      id: uid(),
+      name: preferred ? modelDisplayName(preferred) : "Anggota " + (index+1),
+      autoName: true,
+      model: preferred ? preferred.id : "auto",
+      persona: "",
+      color: MEMBER_PALETTE[index % MEMBER_PALETTE.length]
+    };
+  }
+
+  function openGroupModal(existingConv, newMode){
+    const mode = existingConv ? existingConv.type : (newMode || "group");
+    groupModalMode = mode;
+    const isDiscussion = mode === "discussion";
+    groupModalEditingId = existingConv ? existingConv.id : null;
+    groupModalMembers = existingConv
+      ? JSON.parse(JSON.stringify(existingConv.members))
+      : [makeBlankMember(0), makeBlankMember(1)];
+    groupModalKickedMembers = existingConv ? JSON.parse(JSON.stringify(existingConv.kickedMembers||[])) : [];
+    $("groupModalTitle").textContent = existingConv
+      ? (isDiscussion ? "Kelola diskusi" : "Kelola grup")
+      : (isDiscussion ? "Diskusi baru" : "Grup chat baru");
+    $("groupTitleInput").value = existingConv ? existingConv.title : (isDiscussion ? "Diskusi baru" : "Grup baru");
+    $("groupTopicInput").value = existingConv ? (existingConv.systemPrompt||"") : "";
+    $("memberSectionLabel").textContent = isDiscussion ? "Anggota diskusi" : "Anggota grup";
+    $("groupReplyModeField").classList.toggle("hidden", isDiscussion);
+    $("discussionSettingsField").classList.toggle("hidden", !isDiscussion);
+    if(isDiscussion){
+      $("discussionRoundsInput").value = existingConv ? (existingConv.discussionRounds||3) : 3;
+      $("discussionConclusionModelSelect").innerHTML = modelOptionsHtml(existingConv ? (existingConv.conclusionModel||"auto") : "auto");
+      $("discussionSummarizeRoundsInput").checked = existingConv ? !!existingConv.summarizeRounds : false;
+      $("discussionRequestVotesInput").checked = existingConv ? existingConv.requestVotes !== false : true;
+    } else {
+      $("groupReplyModeSelect").value = existingConv ? (existingConv.replyMode || "all") : "random_some";
+    }
+    $("deleteGroupBtn").classList.toggle("hidden", !existingConv);
+    $("exportMdBtn").classList.toggle("hidden", !existingConv || existingConv.messages.length===0);
+    renderGroupMembersUI();
+    renderKickedMembersUI();
+    $("groupBulkSearch").value = "";
+    $("groupBulkFreeOnly").checked = false;
+    renderGroupBulkList();
+    $("groupModalOverlay").classList.remove("hidden");
+  }
+  function renderKickedMembersUI(){
+    const section = $("kickedMembersSection");
+    const container = $("kickedMemberRows");
+    section.classList.toggle("hidden", groupModalKickedMembers.length===0);
+    container.innerHTML = groupModalKickedMembers.map((m,i)=>`
+      <div class="member-row" data-kidx="${i}" style="opacity:.75;">
+        <span class="swatch" style="width:10px;height:10px;border-radius:50%;background:${m.color};flex-shrink:0;"></span>
+        <span style="flex:1;font-size:.8rem;">${escapeHtml(m.name)} <span style="color:var(--text-3);">(${escapeHtml(m.model)})</span></span>
+        <button type="button" class="btn-sm" data-restore="${i}">↩ Kembalikan</button>
+      </div>`).join("");
+    container.querySelectorAll("[data-restore]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const i = parseInt(btn.dataset.restore);
+        const [restored] = groupModalKickedMembers.splice(i,1);
+        groupModalMembers.push(restored);
+        renderGroupMembersUI();
+        renderKickedMembersUI();
+      });
+    });
+  }
+  function closeGroupModal(){ $("groupModalOverlay").classList.add("hidden"); }
+
+  function modelOptionsHtml(selectedId){
+    const ids = modelsCache.length ? modelsCache.map(m=>m.id) : [];
+    if(!ids.includes("auto")) ids.unshift("auto");
+    if(selectedId && !ids.includes(selectedId)) ids.unshift(selectedId);
+    return ids.map(id=>`<option value="${escapeHtml(id)}" ${id===selectedId?"selected":""}>${id==="auto"?"auto (OmniRoute memilih, paling stabil)":escapeHtml(id)}</option>`).join("");
+  }
+
+  function memberReplyCount(memberId){
+    if(!groupModalEditingId) return null;
+    const conv = state.conversations.find(c=>c.id===groupModalEditingId);
+    if(!conv) return null;
+    return conv.messages.filter(m=>m.memberId===memberId).length;
+  }
+  function renderGroupMembersUI(){
+    $("memberCountLabel").textContent = groupModalMembers.length + " anggota";
+    const container = $("memberRows");
+    container.innerHTML = groupModalMembers.map((m, i)=>{
+      const replyCount = memberReplyCount(m.id);
+      return `
+      <div class="member-row ${m.paused ? 'member-paused' : ''}" data-idx="${i}">
+        <input type="color" class="member-color-input" value="${m.color}">
+        <input type="text" class="member-name-input" value="${escapeHtml(m.name)}" placeholder="Nama">
+        <select class="member-model-select">${modelOptionsHtml(m.model)}</select>
+        <input type="text" class="member-persona-input" value="${escapeHtml(m.persona||"")}" placeholder="Persona singkat (opsional)">
+        ${groupModalMode==="discussion" ? `<select class="member-role-select" title="Peran dalam diskusi">
+          <option value="penanggap" ${(!m.roleType || m.roleType==="penanggap")?"selected":""}>🗣 Penanggap</option>
+          <option value="narasumber" ${m.roleType==="narasumber"?"selected":""}>🎤 Narasumber</option>
+          <option value="moderator" ${m.roleType==="moderator"?"selected":""}>🧑‍⚖️ Moderator</option>
+          <option value="notulen" ${m.roleType==="notulen"?"selected":""}>📝 Notulen</option>
+        </select>` : ""}
+        <label class="member-pause-toggle" title="Jeda sementara — tidak ikut balas tapi tetap tersimpan">
+          <input type="checkbox" class="member-pause-input" ${m.paused ? "checked" : ""}> ⏸
+        </label>
+        ${replyCount!==null ? `<span class="member-test-status" title="Jumlah balasan dari anggota ini di percakapan ini">${replyCount} balasan</span>` : ""}
+        <button type="button" class="icon-btn member-test-btn" title="Tes koneksi model ini">🔌</button>
+        <span class="member-test-status"></span>
+        <button type="button" class="icon-btn member-remove-btn" title="Hapus anggota">🗑</button>
+      </div>`;
+    }).join("");
+    container.querySelectorAll(".member-row").forEach(row=>{
+      const idx = parseInt(row.dataset.idx);
+      row.querySelector(".member-color-input").addEventListener("input", e=> groupModalMembers[idx].color = e.target.value);
+      row.querySelector(".member-name-input").addEventListener("input", e=>{
+        groupModalMembers[idx].name = e.target.value;
+        groupModalMembers[idx].autoName = false;
+      });
+      row.querySelector(".member-model-select").addEventListener("change", e=>{
+        groupModalMembers[idx].model = e.target.value;
+        row.querySelector(".member-test-status").textContent = "";
+        if(groupModalMembers[idx].autoName){
+          const mm = modelsCache.find(x=>x.id===e.target.value);
+          groupModalMembers[idx].name = mm ? modelDisplayName(mm) : e.target.value;
+          renderGroupMembersUI();
+        }
+      });
+      row.querySelector(".member-persona-input").addEventListener("input", e=> groupModalMembers[idx].persona = e.target.value);
+      row.querySelector(".member-pause-input").addEventListener("change", e=>{
+        groupModalMembers[idx].paused = e.target.checked;
+        row.classList.toggle("member-paused", e.target.checked);
+      });
+      const roleSelect = row.querySelector(".member-role-select");
+      if(roleSelect){
+        roleSelect.addEventListener("change", e=> groupModalMembers[idx].roleType = e.target.value);
+      }
+      row.querySelector(".member-test-btn").addEventListener("click", async ()=>{
+        const statusEl = row.querySelector(".member-test-status");
+        statusEl.textContent = "⏳ menguji..."; statusEl.style.color = "var(--text-3)"; statusEl.title = "";
+        const r = await testModelConnectivity(groupModalMembers[idx].model);
+        statusEl.textContent = r.ok ? "🟢 terhubung" : "🔴 " + r.reason;
+        statusEl.style.color = r.ok ? "#22c55e" : "var(--danger)";
+        statusEl.title = r.ok ? "" : (r.reason + " — " + diagnoseFailureReason(r.reason));
+      });
+      row.querySelector(".member-remove-btn").addEventListener("click", ()=>{
+        groupModalMembers.splice(idx,1);
+        renderGroupMembersUI();
+      });
+    });
+  }
+  $("addMemberBtn").addEventListener("click", ()=>{
+    groupModalMembers.push(makeBlankMember(groupModalMembers.length));
+    renderGroupMembersUI();
+  });
+  $("testAllMembersBtn").addEventListener("click", async ()=>{
+    const btn = $("testAllMembersBtn");
+    if(groupModalMembers.length===0) return;
+    btn.disabled = true; btn.textContent = "Menguji...";
+    document.querySelectorAll(".member-test-status").forEach(el=>{ el.textContent = "⏳"; el.style.color = "var(--text-3)"; });
+    const results = await testModelsWithLimit(groupModalMembers.map(m=>m.model), 4, (id, r)=>{
+      document.querySelectorAll(".member-row").forEach(row=>{
+        const idx = parseInt(row.dataset.idx);
+        if(groupModalMembers[idx] && groupModalMembers[idx].model===id){
+          const statusEl = row.querySelector(".member-test-status");
+          statusEl.textContent = r.ok ? "🟢 terhubung" : "🔴 " + r.reason;
+          statusEl.style.color = r.ok ? "#22c55e" : "var(--danger)";
+          statusEl.title = r.ok ? "" : (r.reason + " — " + diagnoseFailureReason(r.reason));
+        }
+      });
+    });
+    btn.disabled = false; btn.textContent = "🔌 Tes semua anggota";
+    const failedIdx = groupModalMembers.map((m,i)=>i).filter(i=> results[groupModalMembers[i].model] && !results[groupModalMembers[i].model].ok);
+    if(failedIdx.length===0){
+      alert("Semua anggota terhubung dengan baik.");
+      return;
+    }
+    const failedNames = failedIdx.map(i=>groupModalMembers[i].name).join(", ");
+    if(confirm(`${failedIdx.length} anggota tidak merespons (${failedNames}). Keluarkan otomatis dari grup ini sekarang?`)){
+      failedIdx.sort((a,b)=>b-a).forEach(i=> groupModalMembers.splice(i,1));
+      renderGroupMembersUI();
+    }
+  });
+
+  function bulkListCandidates(){
+    const q = ($("groupBulkSearch").value||"").toLowerCase();
+    const freeOnly = $("groupBulkFreeOnly").checked;
+    const deduped = uniqueByName(modelsCache.filter(isChatModel));
+    return deduped.filter(m=>{
+      if(freeOnly && !isFreeModel(m)) return false;
+      if(q && !m.id.toLowerCase().includes(q) && !(m.name||"").toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
+  function renderGroupBulkList(){
+    const items = bulkListCandidates().slice(0,300);
+    const list = $("groupBulkList");
+    if(items.length===0){ list.innerHTML = '<div class="empty-note">Tidak ada model (cek koneksi OmniRoute, atau longgarkan filter)</div>'; return; }
+    list.innerHTML = items.map(m=>`
+      <label class="bulk-model-row">
+        <input type="checkbox" class="bulk-model-cb" value="${escapeHtml(m.id)}">
+        ${escapeHtml(modelDisplayName(m))} <span style="color:var(--text-3);">(${escapeHtml(m.id)})</span>
+        ${isFreeModel(m) ? '<span class="chip on" style="padding:2px 7px;font-size:.62rem;">GRATIS</span>' : ""}
+      </label>
+    `).join("");
+  }
+  $("groupBulkSearch").addEventListener("input", renderGroupBulkList);
+  $("groupBulkFreeOnly").addEventListener("change", renderGroupBulkList);
+  function addModelsAsMembers(models){
+    models.forEach(m=>{
+      groupModalMembers.push({
+        id: uid(), name: modelDisplayName(m).slice(0,30), autoName: false, model: m.id, persona: "",
+        color: MEMBER_PALETTE[groupModalMembers.length % MEMBER_PALETTE.length]
+      });
+    });
+    renderGroupMembersUI();
+    renderGroupBulkList();
+  }
+  async function testAndAddModels(models, btn, defaultLabel){
+    if(models.length===0) return;
+    btn.disabled = true;
+    const list = $("groupBulkList");
+    let doneCount = 0;
+    list.innerHTML = `<div class="empty-note">Menguji koneksi ${models.length} model... (0/${models.length})</div>`;
+    const results = await testModelsWithLimit(models.map(m=>m.id), 4, ()=>{
+      doneCount++;
+      list.innerHTML = `<div class="empty-note">Menguji koneksi ${models.length} model... (${doneCount}/${models.length})</div>`;
+      btn.textContent = `Menguji... (${doneCount}/${models.length})`;
+    });
+    const passed = models.filter(m=>results[m.id]?.ok);
+    const failed = models.filter(m=>!results[m.id]?.ok);
+    addModelsAsMembers(passed);
+    btn.disabled = false; btn.textContent = defaultLabel;
+    renderGroupBulkList();
+    if(failed.length){
+      alert(`${passed.length} model terhubung dan ditambahkan sebagai anggota.\n${failed.length} model dilewati karena tidak merespons:\n${failed.map(m=>modelDisplayName(m)+" ("+(results[m.id]?.reason||"?")+")").join("\n")}`);
+    } else {
+      alert(`Semua ${passed.length} model terhubung dan ditambahkan sebagai anggota.`);
+    }
+  }
+  $("addBulkModelsBtn").addEventListener("click", ()=>{
+    const checkedIds = [...document.querySelectorAll(".bulk-model-cb:checked")].map(cb=>cb.value);
+    const models = checkedIds.map(id=>modelsCache.find(m=>m.id===id)).filter(Boolean);
+    if(models.length===0) return;
+    testAndAddModels(models, $("addBulkModelsBtn"), "+ Tambahkan model terpilih");
+  });
+  $("addAllFreeModelsBtn").addEventListener("click", ()=>{
+    const freeModels = uniqueByName(modelsCache.filter(m=>isChatModel(m) && isFreeModel(m)));
+    if(freeModels.length===0){ alert("Tidak ada model gratis yang terdeteksi dari daftar model OmniRoute saat ini."); return; }
+    if(!confirm(`Uji koneksi ${freeModels.length} model gratis unik (sudah dideduplikasi berdasarkan nama) dulu, lalu tambahkan otomatis yang berhasil terhubung saja. Lanjutkan?`)) return;
+    testAndAddModels(freeModels, $("addAllFreeModelsBtn"), "+ Tambahkan SEMUA model gratis");
+  });
+  $("addAllAnyModelsBtn").addEventListener("click", ()=>{
+    const allModelsRaw = modelsCache.filter(isChatModel);
+    const allModels = uniqueByName(allModelsRaw);
+    if(allModels.length===0){ alert("Tidak ada model yang terdeteksi (cek koneksi OmniRoute)."); return; }
+    if(!confirm(`${allModelsRaw.length} model ditemukan, disederhanakan jadi ${allModels.length} model unik (nama sama dianggap satu, biar tidak menguji hal yang sama berkali-kali). Uji koneksi satu per satu (request kecil, hemat token), lalu tambahkan otomatis yang berhasil terhubung saja. Ini bisa makan waktu beberapa menit. Lanjutkan?`)) return;
+    testAndAddModels(allModels, $("addAllAnyModelsBtn"), "+ Tes & tambahkan SEMUA model tersedia");
+  });
+
+  $("newGroupBtn").addEventListener("click", ()=> openGroupModal(null, "group"));
+  $("newDiscussionBtn").addEventListener("click", ()=> openGroupModal(null, "discussion"));
+  $("closeGroupModalBtn").addEventListener("click", closeGroupModal);
+  $("cancelGroupModalBtn").addEventListener("click", closeGroupModal);
+  function exportConversationAsMarkdown(conv){
+    let md = `# ${conv.title}\n\n`;
+    if(conv.systemPrompt && conv.systemPrompt.trim()) md += `> Topik/konteks: ${conv.systemPrompt.trim()}\n\n`;
+    md += `_Diekspor ${new Date().toLocaleString()}_\n\n---\n\n`;
+    conv.messages.forEach(m=>{
+      if(m.role==="system-note"){ md += `*${m.content}*\n\n`; return; }
+      if(m.role==="user"){ md += `**User:** ${m.content}\n\n`; return; }
+      const label = m.isConclusion ? `📋 Kesimpulan${m.notulenName ? " — "+m.notulenName : ""}`
+        : m.isRoundSummary ? `📝 ${m.notulenName || "Notulen"} (Ronde ${m.meta?.round||""})`
+        : (m.memberName ? `${m.memberName}${m.roleTag ? " ("+m.roleTag+")" : ""}` : "Asisten");
+      md += `**${label}:** ${m.content}\n\n`;
+    });
+    return md;
+  }
+  $("exportMdBtn").addEventListener("click", ()=>{
+    if(!groupModalEditingId) return;
+    const conv = state.conversations.find(c=>c.id===groupModalEditingId);
+    if(!conv) return;
+    const md = exportConversationAsMarkdown(conv);
+    const blob = new Blob([md], { type:"text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = conv.title.replace(/[^a-z0-9\-_ ]/gi,"").trim().replace(/\s+/g,"-").slice(0,60) + ".md";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+  });
+  $("deleteGroupBtn").addEventListener("click", ()=>{
+    if(!groupModalEditingId) return;
+    if(!confirm("Hapus grup ini beserta semua isinya?")) return;
+    state.conversations = state.conversations.filter(c=>c.id!==groupModalEditingId);
+    if(state.activeId===groupModalEditingId) state.activeId = state.conversations[0]?.id || null;
+    saveState(); renderSidebar(); renderMessages();
+    closeGroupModal();
+  });
+  $("saveGroupModalBtn").addEventListener("click", ()=>{
+    const title = $("groupTitleInput").value.trim() || "Grup baru";
+    const topic = $("groupTopicInput").value;
+    if(groupModalMembers.length < 2){
+      alert(groupModalMode==="discussion" ? "Minimal 2 anggota diperlukan untuk diskusi." : "Minimal 2 anggota diperlukan untuk grup chat.");
+      return;
+    }
+    const seen = {};
+    groupModalMembers.forEach(m=>{
+      m.name = (m.name||"").trim() || "Anggota";
+      if(seen[m.name]){ seen[m.name]++; m.name = m.name + " " + seen[m.name]; }
+      else { seen[m.name] = 1; }
+    });
+    const isDiscussion = groupModalMode === "discussion";
+    if(groupModalEditingId){
+      const conv = state.conversations.find(c=>c.id===groupModalEditingId);
+      conv.title = title; conv.systemPrompt = topic; conv.members = groupModalMembers;
+      conv.kickedMembers = groupModalKickedMembers;
+      if(isDiscussion){
+        conv.discussionRounds = Math.max(1, parseInt($("discussionRoundsInput").value) || 3);
+        conv.conclusionModel = $("discussionConclusionModelSelect").value || "auto";
+        conv.summarizeRounds = $("discussionSummarizeRoundsInput").checked;
+        conv.requestVotes = $("discussionRequestVotesInput").checked;
+      } else {
+        conv.replyMode = $("groupReplyModeSelect").value;
+      }
+      conv.updatedAt = Date.now();
+    } else {
+      const conv = {
+        id: uid(), type: groupModalMode, title, systemPrompt: topic,
+        members: groupModalMembers, kickedMembers: groupModalKickedMembers,
+        messages: [], createdAt: Date.now(), updatedAt: Date.now()
+      };
+      if(isDiscussion){
+        conv.discussionRounds = Math.max(1, parseInt($("discussionRoundsInput").value) || 3);
+        conv.conclusionModel = $("discussionConclusionModelSelect").value || "auto";
+        conv.summarizeRounds = $("discussionSummarizeRoundsInput").checked;
+        conv.requestVotes = $("discussionRequestVotesInput").checked;
+      } else {
+        conv.replyMode = $("groupReplyModeSelect").value;
+      }
+      state.conversations.unshift(conv);
+      state.activeId = conv.id;
+    }
+    saveState(); renderSidebar(); renderMessages();
+    closeGroupModal();
+  });
+
+  /* ============ INIT ============ */
+  function init(){
+    applyTheme();
+    syncTopbar();
+    renderSidebar();
+    if(!state.activeId && state.conversations.length) state.activeId = state.conversations[0].id;
+    renderMessages();
+    renderDashboard();
+    pingAndFetchModels();
+    autoResize();
+  }
+  init();
+})();
+</script>
+</body>
+</html>
