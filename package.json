@@ -25,7 +25,8 @@
     "test:engine": "tsx ./tests/engine-smoke.ts",
     "test:e2e": "tsx ./tests/e2e-prod.ts",
     "typecheck": "tsc --noEmit",
-    "docs:images": "tsx ./tools/render-docs-images.ts"
+    "docs:images": "tsx ./tools/render-docs-images.ts && tsx ./tools/render-readme-assets.ts",
+    "docs:assets": "tsx ./tools/render-readme-assets.ts"
   },
   "dependencies": {
     "@langchain/langgraph": "^1.4.19",
